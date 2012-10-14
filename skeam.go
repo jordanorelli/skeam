@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+var DEBUG = false
+
 type typ3 int
 
 const (
@@ -56,12 +58,14 @@ type lexer struct {
 // There's no sanity checking to make sure you don't emit some bullshit, so
 // don't fuck it up.
 func (l *lexer) emit(t typ3) {
+	debugPrint("emit " + string(l.cur))
 	l.out <- token{lexeme: string(l.cur), t: t}
 	l.cur = nil
 }
 
 // appends the rune to the current in-progress lexem
 func (l *lexer) append(r rune) {
+	debugPrint(fmt.Sprintf("append %c\n", (r)))
 	if l.cur == nil {
 		l.cur = make([]rune, 0, 32)
 	}
@@ -76,25 +80,15 @@ func isDigit(r rune) bool {
 	return false
 }
 
-// lexes stuff at the root level of the input.
-func lexRoot(l *lexer) (stateFn, error) {
-	r, _, err := l.ReadRune()
-	if err != nil {
-		return nil, err
+func debugPrint(s string) {
+	if DEBUG {
+		fmt.Println(s)
 	}
-	switch r {
-	case ';':
-		return lexComment, nil
-	case '(':
-		return lexOpenParen, nil
-	case ' ', '\t', '\n':
-		return lexRoot, nil
-	}
-	return nil, fmt.Errorf("unexpected rune in lexRoot: %c", r)
 }
 
 // lexes an open parenthesis
 func lexOpenParen(l *lexer) (stateFn, error) {
+	debugPrint("-->lexOpenParen")
 	l.out <- token{"(", openParen}
 	l.depth++
 	r, _, err := l.ReadRune()
@@ -121,6 +115,7 @@ func lexOpenParen(l *lexer) (stateFn, error) {
 // and the lexer shouldn't have a state.  I think wehat I'm doing now is
 // "wrong" but who honestly gives a shit.
 func lexWhitespace(l *lexer) (stateFn, error) {
+	debugPrint("-->lexWhitespace")
 	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
@@ -144,6 +139,7 @@ func lexWhitespace(l *lexer) (stateFn, error) {
 }
 
 func lexString(l *lexer) (stateFn, error) {
+	debugPrint("-->lexString")
 	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
@@ -161,6 +157,7 @@ func lexString(l *lexer) (stateFn, error) {
 
 // lex the character *after* the string escape character \
 func lexStringEsc(l *lexer) (stateFn, error) {
+	debugPrint("-->lexStringEsc")
 	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
@@ -173,6 +170,7 @@ func lexStringEsc(l *lexer) (stateFn, error) {
 // whitespace, close paren, a period to indicate we want a float, or more
 // digits.  Everything else is crap.
 func lexInt(l *lexer) (stateFn, error) {
+	debugPrint("-->lexInt")
 	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
@@ -201,6 +199,7 @@ func lexInt(l *lexer) (stateFn, error) {
 // once we're in a float, the only valid values are digits, whitespace or close
 // paren.
 func lexFloat(l *lexer) (stateFn, error) {
+	debugPrint("-->lexFloat")
 	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
@@ -226,12 +225,15 @@ func lexFloat(l *lexer) (stateFn, error) {
 
 // lexes a symbol in progress
 func lexSymbol(l *lexer) (stateFn, error) {
+	debugPrint("-->lexSymbol")
 	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
 	}
+
 	switch r {
 	case ' ', '\t', '\n':
+		debugPrint("ending lexSymbol on whitespace")
 		l.emit(symbol)
 		return lexWhitespace, nil
 	case ')':
@@ -249,6 +251,7 @@ func lexSymbol(l *lexer) (stateFn, error) {
 
 // lex a close parenthesis
 func lexCloseParen(l *lexer) (stateFn, error) {
+	debugPrint("-->lexCloseParen")
 	l.out <- token{")", closeParen}
 	l.depth--
 	r, _, err := l.ReadRune()
@@ -257,11 +260,7 @@ func lexCloseParen(l *lexer) (stateFn, error) {
 	}
 	switch r {
 	case ' ', '\t', '\n':
-		if l.depth == 0 {
-			return lexRoot, nil
-		} else {
-			return lexWhitespace, nil
-		}
+		return lexWhitespace, nil
 	case ')':
 		return lexCloseParen, nil
 	case ';':
@@ -272,23 +271,16 @@ func lexCloseParen(l *lexer) (stateFn, error) {
 
 // lexes a comment
 func lexComment(l *lexer) (stateFn, error) {
+	debugPrint("-->lexComment")
 	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
 	}
 	switch r {
 	case '\n', '\r':
-		if l.depth == 0 {
-			return lexRoot, nil
-		} else {
-			return lexWhitespace, nil
-		}
+		return lexWhitespace, nil
 	}
 	return lexComment, nil
-}
-
-func lexs(input string, c chan token) {
-    lex(strings.NewReader(input), c)
 }
 
 // lexes some lispy input from an io.Reader, emiting tokens on chan c.  The
@@ -299,7 +291,7 @@ func lex(input io.Reader, c chan token) {
 	l := &lexer{bufio.NewReader(input), nil, 0, c}
 
 	var err error
-	f := stateFn(lexRoot)
+	f := stateFn(lexWhitespace)
 	for err == nil {
 		f, err = f(l)
 	}
@@ -318,11 +310,37 @@ func args() {
 		fmt.Fprintln(os.Stderr, "unable to read file ", filename)
 		os.Exit(1)
 	}
+	defer f.Close()
+
 	c := make(chan token)
 	go lex(f, c)
 
 	for s := range c {
 		fmt.Printf("%11s %s\n", s.t, s.lexeme)
+	}
+}
+
+func lexs(input string) {
+	c := make(chan token)
+
+	go func() {
+		defer close(c)
+		l := &lexer{strings.NewReader(input), nil, 0, c}
+		var err error
+		f := stateFn(lexWhitespace)
+		for err == nil {
+			f, err = f(l)
+		}
+		if err != io.EOF {
+			fmt.Println(err)
+		}
+		if l.depth != 0 {
+			fmt.Println("error: unbalanced parenthesis")
+		}
+	}()
+
+	for t := range c {
+		fmt.Printf("%11s %s\n", t.t, t.lexeme)
 	}
 }
 
@@ -332,21 +350,17 @@ func main() {
 		return
 	}
 
-    printexp := func(c chan token) {
-        for s := range c {
-            fmt.Printf("%11s %s\n", s.t, s.lexeme)
-        }
-    }
-
 	r := bufio.NewReader(os.Stdin)
 	for {
-        c := make(chan token)
-        go printexp(c)
 		fmt.Print("> ")
-		line, _, err := r.ReadLine()
-		if err != nil {
-			return
+		line, prefix, err := r.ReadLine()
+		if prefix {
+			fmt.Println("(prefix)")
 		}
-        lexs(string(line), c)
+		if err != nil {
+			fmt.Println("error: ", err)
+			continue
+		}
+		lexs(string(line) + "\n")
 	}
 }
