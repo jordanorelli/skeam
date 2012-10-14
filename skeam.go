@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 )
 
 type typ3 int
@@ -45,15 +46,10 @@ type token struct {
 type stateFn func(*lexer) (stateFn, error)
 
 type lexer struct {
-	input *bufio.Reader
+	io.RuneReader
 	cur   []rune
 	depth int
 	out   chan token
-}
-
-func (l *lexer) next() (rune, error) {
-	r, _, err := l.input.ReadRune()
-	return r, err
 }
 
 // clears the current lexem buffer and emits a token of the given type.
@@ -82,13 +78,13 @@ func isDigit(r rune) bool {
 
 // lexes stuff at the root level of the input.
 func lexRoot(l *lexer) (stateFn, error) {
-	r, err := l.next()
+	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
 	}
 	switch r {
-    case ';':
-        return lexComment, nil
+	case ';':
+		return lexComment, nil
 	case '(':
 		return lexOpenParen, nil
 	case ' ', '\t', '\n':
@@ -101,7 +97,7 @@ func lexRoot(l *lexer) (stateFn, error) {
 func lexOpenParen(l *lexer) (stateFn, error) {
 	l.out <- token{"(", openParen}
 	l.depth++
-	r, err := l.next()
+	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
 	}
@@ -109,9 +105,9 @@ func lexOpenParen(l *lexer) (stateFn, error) {
 	case ' ', '\t', '\n', '\r':
 		return lexWhitespace, nil
 	case '(':
-		return nil, fmt.Errorf("the whole (( thing isn't supported yet")
-    case ';':
-        return lexComment, nil
+		return lexOpenParen, nil
+	case ';':
+		return lexComment, nil
 	}
 	if isDigit(r) {
 		l.append(r)
@@ -125,19 +121,19 @@ func lexOpenParen(l *lexer) (stateFn, error) {
 // and the lexer shouldn't have a state.  I think wehat I'm doing now is
 // "wrong" but who honestly gives a shit.
 func lexWhitespace(l *lexer) (stateFn, error) {
-	r, err := l.next()
+	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
 	}
 	switch r {
 	case ' ', '\t', '\n':
 		return lexWhitespace, nil
-    case '"':
-        return lexString, nil
+	case '"':
+		return lexString, nil
 	case '(':
 		return lexOpenParen, nil
-    case ';':
-        return lexComment, nil
+	case ';':
+		return lexComment, nil
 	}
 	if isDigit(r) {
 		l.append(r)
@@ -148,7 +144,7 @@ func lexWhitespace(l *lexer) (stateFn, error) {
 }
 
 func lexString(l *lexer) (stateFn, error) {
-	r, err := l.next()
+	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
 	}
@@ -156,8 +152,8 @@ func lexString(l *lexer) (stateFn, error) {
 	case '"':
 		l.emit(str1ng)
 		return lexWhitespace, nil
-    case '\\':
-        return lexStringEsc, nil
+	case '\\':
+		return lexStringEsc, nil
 	}
 	l.append(r)
 	return lexString, nil
@@ -165,19 +161,19 @@ func lexString(l *lexer) (stateFn, error) {
 
 // lex the character *after* the string escape character \
 func lexStringEsc(l *lexer) (stateFn, error) {
-    r, err := l.next()
-    if err != nil {
-        return nil, err
-    }
-    l.append(r)
-    return lexString, nil
+	r, _, err := l.ReadRune()
+	if err != nil {
+		return nil, err
+	}
+	l.append(r)
+	return lexString, nil
 }
 
 // lex an integer.  Once we're on an integer, the only valid characters are
 // whitespace, close paren, a period to indicate we want a float, or more
 // digits.  Everything else is crap.
 func lexInt(l *lexer) (stateFn, error) {
-	r, err := l.next()
+	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
 	}
@@ -191,9 +187,9 @@ func lexInt(l *lexer) (stateFn, error) {
 	case ')':
 		l.emit(int3ger)
 		return lexCloseParen, nil
-    case ';':
-        l.emit(int3ger)
-        return lexComment, nil
+	case ';':
+		l.emit(int3ger)
+		return lexComment, nil
 	}
 	if isDigit(r) {
 		l.append(r)
@@ -205,7 +201,7 @@ func lexInt(l *lexer) (stateFn, error) {
 // once we're in a float, the only valid values are digits, whitespace or close
 // paren.
 func lexFloat(l *lexer) (stateFn, error) {
-	r, err := l.next()
+	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
 	}
@@ -217,9 +213,9 @@ func lexFloat(l *lexer) (stateFn, error) {
 	case ')':
 		l.emit(fl0at)
 		return lexCloseParen, nil
-    case ';':
-        l.emit(fl0at)
-        return lexComment, nil
+	case ';':
+		l.emit(fl0at)
+		return lexComment, nil
 	}
 	if isDigit(r) {
 		l.append(r)
@@ -230,7 +226,7 @@ func lexFloat(l *lexer) (stateFn, error) {
 
 // lexes a symbol in progress
 func lexSymbol(l *lexer) (stateFn, error) {
-	r, err := l.next()
+	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
 	}
@@ -241,9 +237,9 @@ func lexSymbol(l *lexer) (stateFn, error) {
 	case ')':
 		l.emit(symbol)
 		return lexCloseParen, nil
-    case ';':
-        l.emit(symbol)
-        return lexComment, nil
+	case ';':
+		l.emit(symbol)
+		return lexComment, nil
 	default:
 		l.append(r)
 		return lexSymbol, nil
@@ -255,7 +251,7 @@ func lexSymbol(l *lexer) (stateFn, error) {
 func lexCloseParen(l *lexer) (stateFn, error) {
 	l.out <- token{")", closeParen}
 	l.depth--
-	r, err := l.next()
+	r, _, err := l.ReadRune()
 	if err != nil {
 		return nil, err
 	}
@@ -268,27 +264,31 @@ func lexCloseParen(l *lexer) (stateFn, error) {
 		}
 	case ')':
 		return lexCloseParen, nil
-    case ';':
-        return lexComment, nil
+	case ';':
+		return lexComment, nil
 	}
 	return nil, fmt.Errorf("unimplemented")
 }
 
 // lexes a comment
 func lexComment(l *lexer) (stateFn, error) {
-    r, err := l.next()
-    if err != nil {
-        return nil, err
-    }
-    switch r {
-    case '\n', '\r':
-        if l.depth == 0 {
-            return lexRoot, nil
-        } else {
-            return lexWhitespace, nil
-        }
-    }
-    return lexComment, nil
+	r, _, err := l.ReadRune()
+	if err != nil {
+		return nil, err
+	}
+	switch r {
+	case '\n', '\r':
+		if l.depth == 0 {
+			return lexRoot, nil
+		} else {
+			return lexWhitespace, nil
+		}
+	}
+	return lexComment, nil
+}
+
+func lexs(input string, c chan token) {
+    lex(strings.NewReader(input), c)
 }
 
 // lexes some lispy input from an io.Reader, emiting tokens on chan c.  The
@@ -296,10 +296,7 @@ func lexComment(l *lexer) (stateFn, error) {
 // new tokens.
 func lex(input io.Reader, c chan token) {
 	defer close(c)
-	l := &lexer{
-		input: bufio.NewReader(input),
-		out:   c,
-	}
+	l := &lexer{bufio.NewReader(input), nil, 0, c}
 
 	var err error
 	f := stateFn(lexRoot)
@@ -314,19 +311,42 @@ func lex(input io.Reader, c chan token) {
 	}
 }
 
-func main() {
-	filename := "input.lisp"
-
+func args() {
+	filename := os.Args[1]
 	f, err := os.Open(filename)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "unable to read file ", filename)
 		os.Exit(1)
 	}
-
 	c := make(chan token)
 	go lex(f, c)
 
 	for s := range c {
-		fmt.Println(s.t, s.lexeme)
+		fmt.Printf("%11s %s\n", s.t, s.lexeme)
+	}
+}
+
+func main() {
+	if len(os.Args) > 1 {
+		args()
+		return
+	}
+
+    printexp := func(c chan token) {
+        for s := range c {
+            fmt.Printf("%11s %s\n", s.t, s.lexeme)
+        }
+    }
+
+	r := bufio.NewReader(os.Stdin)
+	for {
+        c := make(chan token)
+        go printexp(c)
+		fmt.Print("> ")
+		line, _, err := r.ReadLine()
+		if err != nil {
+			return
+		}
+        lexs(string(line), c)
 	}
 }
