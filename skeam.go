@@ -150,9 +150,20 @@ func lexString(l *lexer) (stateFn, error) {
 	case '"':
 		l.emit(str1ng)
 		return lexWhitespace, nil
+    case '\\':
+        return lexStringEsc, nil
 	}
 	l.append(r)
 	return lexString, nil
+}
+
+func lexStringEsc(l *lexer) (stateFn, error) {
+    r, err := l.next()
+    if err != nil {
+        return nil, err
+    }
+    l.append(r)
+    return lexString, nil
 }
 
 // lex an integer.  Once we're on an integer, the only valid characters are

@@ -8,7 +8,9 @@
    4.0
    (dave
      1
+     "here's an escaped quote: \" how neat!!!"
      2
+     "and here's an escaped \\, sweet!"
      albert-camus
      3
      (sam 3 2 2)))
