@@ -1,25 +1,23 @@
 package main
 
 import (
-	"bytes"
+	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 )
 
 type stateFn func(*lexer) (stateFn, error)
 
 type lexer struct {
-	input io.ReadCloser
-	buf   *bytes.Buffer
+	input *bufio.Reader
 	cur   []rune
 	depth int
 	out   chan string
 }
 
 func (l *lexer) next() (rune, error) {
-	r, _, err := l.buf.ReadRune()
+	r, _, err := l.input.ReadRune()
 	return r, err
 }
 
@@ -131,11 +129,11 @@ func lexCloseParen(l *lexer) (stateFn, error) {
 	return nil, fmt.Errorf("unimplemented")
 }
 
-func lex(b []byte, c chan string) {
+func lex(input io.Reader, c chan string) {
 	defer close(c)
 	l := &lexer{
-		buf: bytes.NewBuffer(b),
-		out: c,
+		input: bufio.NewReader(input),
+		out:   c,
 	}
 
 	var err error
@@ -154,14 +152,14 @@ func lex(b []byte, c chan string) {
 func main() {
 	filename := "input.lisp"
 
-	b, err := ioutil.ReadFile(filename)
+	f, err := os.Open(filename)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "unable to read file ", filename)
 		os.Exit(1)
 	}
 
 	c := make(chan string)
-	go lex(b, c)
+	go lex(f, c)
 
 	for s := range c {
 		fmt.Println(s)
