@@ -121,7 +121,7 @@ func lexWhitespace(l *lexer) (stateFn, error) {
 		return nil, err
 	}
 	switch r {
-	case ' ', '\t', '\n':
+	case ' ', '\t', '\n', '\r':
 		return lexWhitespace, nil
 	case '"':
 		return lexString, nil
@@ -176,7 +176,7 @@ func lexInt(l *lexer) (stateFn, error) {
 		return nil, err
 	}
 	switch r {
-	case ' ', '\t', '\n':
+	case ' ', '\t', '\n', '\r':
 		l.emit(int3ger)
 		return lexWhitespace, nil
 	case '.':
@@ -206,7 +206,7 @@ func lexFloat(l *lexer) (stateFn, error) {
 	}
 
 	switch r {
-	case ' ', '\t', '\n':
+	case ' ', '\t', '\n', '\r':
 		l.emit(fl0at)
 		return lexWhitespace, nil
 	case ')':
@@ -232,7 +232,7 @@ func lexSymbol(l *lexer) (stateFn, error) {
 	}
 
 	switch r {
-	case ' ', '\t', '\n':
+	case ' ', '\t', '\n', '\r':
 		debugPrint("ending lexSymbol on whitespace")
 		l.emit(symbol)
 		return lexWhitespace, nil
@@ -259,7 +259,7 @@ func lexCloseParen(l *lexer) (stateFn, error) {
 		return nil, err
 	}
 	switch r {
-	case ' ', '\t', '\n':
+	case ' ', '\t', '\n', '\r':
 		return lexWhitespace, nil
 	case ')':
 		return lexCloseParen, nil
@@ -286,9 +286,9 @@ func lexComment(l *lexer) (stateFn, error) {
 // lexes some lispy input from an io.Reader, emiting tokens on chan c.  The
 // channel is closed when the input reaches EOF, signaling that there are no
 // new tokens.
-func lex(input io.Reader, c chan token) {
+func lex(input io.RuneReader, c chan token) {
 	defer close(c)
-	l := &lexer{bufio.NewReader(input), nil, 0, c}
+	l := &lexer{input, nil, 0, c}
 
 	var err error
 	f := stateFn(lexWhitespace)
@@ -313,35 +313,15 @@ func args() {
 	defer f.Close()
 
 	c := make(chan token)
-	go lex(f, c)
+	go lex(bufio.NewReader(f), c)
 
 	for s := range c {
 		fmt.Printf("%11s %s\n", s.t, s.lexeme)
 	}
 }
 
-func lexs(input string) {
-	c := make(chan token)
-
-	go func() {
-		defer close(c)
-		l := &lexer{strings.NewReader(input), nil, 0, c}
-		var err error
-		f := stateFn(lexWhitespace)
-		for err == nil {
-			f, err = f(l)
-		}
-		if err != io.EOF {
-			fmt.Println(err)
-		}
-		if l.depth != 0 {
-			fmt.Println("error: unbalanced parenthesis")
-		}
-	}()
-
-	for t := range c {
-		fmt.Printf("%11s %s\n", t.t, t.lexeme)
-	}
+func lexs(input string, c chan token) {
+    lex(strings.NewReader(input), c)
 }
 
 func main() {
@@ -361,6 +341,11 @@ func main() {
 			fmt.Println("error: ", err)
 			continue
 		}
-		lexs(string(line) + "\n")
+
+        c := make(chan token)
+		go lexs(string(line) + "\n", c)
+        for s := range c {
+            fmt.Printf("%11s %s\n", s.t, s.lexeme)
+        }
 	}
 }
