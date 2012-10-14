@@ -87,6 +87,8 @@ func lexRoot(l *lexer) (stateFn, error) {
 		return nil, err
 	}
 	switch r {
+    case ';':
+        return lexComment, nil
 	case '(':
 		return lexOpenParen, nil
 	case ' ', '\t', '\n':
@@ -104,10 +106,12 @@ func lexOpenParen(l *lexer) (stateFn, error) {
 		return nil, err
 	}
 	switch r {
-	case ' ', '\t', '\n':
-		return lexRoot, nil
+	case ' ', '\t', '\n', '\r':
+		return lexWhitespace, nil
 	case '(':
 		return nil, fmt.Errorf("the whole (( thing isn't supported yet")
+    case ';':
+        return lexComment, nil
 	}
 	if isDigit(r) {
 		l.append(r)
@@ -132,6 +136,8 @@ func lexWhitespace(l *lexer) (stateFn, error) {
         return lexString, nil
 	case '(':
 		return lexOpenParen, nil
+    case ';':
+        return lexComment, nil
 	}
 	if isDigit(r) {
 		l.append(r)
@@ -157,6 +163,7 @@ func lexString(l *lexer) (stateFn, error) {
 	return lexString, nil
 }
 
+// lex the character *after* the string escape character \
 func lexStringEsc(l *lexer) (stateFn, error) {
     r, err := l.next()
     if err != nil {
@@ -184,6 +191,9 @@ func lexInt(l *lexer) (stateFn, error) {
 	case ')':
 		l.emit(int3ger)
 		return lexCloseParen, nil
+    case ';':
+        l.emit(int3ger)
+        return lexComment, nil
 	}
 	if isDigit(r) {
 		l.append(r)
@@ -207,6 +217,9 @@ func lexFloat(l *lexer) (stateFn, error) {
 	case ')':
 		l.emit(fl0at)
 		return lexCloseParen, nil
+    case ';':
+        l.emit(fl0at)
+        return lexComment, nil
 	}
 	if isDigit(r) {
 		l.append(r)
@@ -228,6 +241,9 @@ func lexSymbol(l *lexer) (stateFn, error) {
 	case ')':
 		l.emit(symbol)
 		return lexCloseParen, nil
+    case ';':
+        l.emit(symbol)
+        return lexComment, nil
 	default:
 		l.append(r)
 		return lexSymbol, nil
@@ -252,8 +268,27 @@ func lexCloseParen(l *lexer) (stateFn, error) {
 		}
 	case ')':
 		return lexCloseParen, nil
+    case ';':
+        return lexComment, nil
 	}
 	return nil, fmt.Errorf("unimplemented")
+}
+
+// lexes a comment
+func lexComment(l *lexer) (stateFn, error) {
+    r, err := l.next()
+    if err != nil {
+        return nil, err
+    }
+    switch r {
+    case '\n', '\r':
+        if l.depth == 0 {
+            return lexRoot, nil
+        } else {
+            return lexWhitespace, nil
+        }
+    }
+    return lexComment, nil
 }
 
 // lexes some lispy input from an io.Reader, emiting tokens on chan c.  The
