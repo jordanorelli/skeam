@@ -337,10 +337,16 @@ func main() {
 		if prefix {
 			fmt.Println("(prefix)")
 		}
-		if err != nil {
+        switch err {
+        case nil:
+            break
+        case io.EOF:
+            fmt.Print("\n")
+            return
+        default:
 			fmt.Println("error: ", err)
-			continue
-		}
+            continue
+        }
 
         c := make(chan token)
 		go lexs(string(line) + "\n", c)
