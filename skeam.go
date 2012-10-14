@@ -67,9 +67,17 @@ func (l *lexer) emit(t typ3) {
 // appends the rune to the current in-progress lexem
 func (l *lexer) append(r rune) {
 	if l.cur == nil {
-        l.cur = make([]rune, 0, 32)
+		l.cur = make([]rune, 0, 32)
 	}
 	l.cur = append(l.cur, r)
+}
+
+func isDigit(r rune) bool {
+	switch r {
+	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		return true
+	}
+	return false
 }
 
 // lexes stuff at the root level of the input.
@@ -85,14 +93,6 @@ func lexRoot(l *lexer) (stateFn, error) {
 		return lexRoot, nil
 	}
 	return nil, fmt.Errorf("unexpected rune in lexRoot: %c", r)
-}
-
-func isDigit(r rune) bool {
-	switch r {
-	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		return true
-	}
-	return false
 }
 
 // lexes an open parenthesis
@@ -117,6 +117,47 @@ func lexOpenParen(l *lexer) (stateFn, error) {
 	return lexSymbol, nil
 }
 
+// lexes some whitespace in progress.  Maybe this should be combined with root
+// and the lexer shouldn't have a state.  I think wehat I'm doing now is
+// "wrong" but who honestly gives a shit.
+func lexWhitespace(l *lexer) (stateFn, error) {
+	r, err := l.next()
+	if err != nil {
+		return nil, err
+	}
+	switch r {
+	case ' ', '\t', '\n':
+		return lexWhitespace, nil
+    case '"':
+        return lexString, nil
+	case '(':
+		return lexOpenParen, nil
+	}
+	if isDigit(r) {
+		l.append(r)
+		return lexInt, nil
+	}
+	l.append(r)
+	return lexSymbol, nil
+}
+
+func lexString(l *lexer) (stateFn, error) {
+	r, err := l.next()
+	if err != nil {
+		return nil, err
+	}
+	switch r {
+	case '"':
+		l.emit(str1ng)
+		return lexWhitespace, nil
+	}
+	l.append(r)
+	return lexString, nil
+}
+
+// lex an integer.  Once we're on an integer, the only valid characters are
+// whitespace, close paren, a period to indicate we want a float, or more
+// digits.  Everything else is crap.
 func lexInt(l *lexer) (stateFn, error) {
 	r, err := l.next()
 	if err != nil {
@@ -181,28 +222,6 @@ func lexSymbol(l *lexer) (stateFn, error) {
 		return lexSymbol, nil
 	}
 	panic("not reached")
-}
-
-// lexes some whitespace in progress.  Maybe this should be combined with root
-// and the lexer shouldn't have a state.  I think wehat I'm doing now is
-// "wrong" but who honestly gives a shit.
-func lexWhitespace(l *lexer) (stateFn, error) {
-	r, err := l.next()
-	if err != nil {
-		return nil, err
-	}
-	switch r {
-	case ' ', '\t', '\n':
-		return lexWhitespace, nil
-	case '(':
-		return lexOpenParen, nil
-	}
-	if isDigit(r) {
-		l.append(r)
-		return lexInt, nil
-	}
-	l.append(r)
-	return lexSymbol, nil
 }
 
 // lex a close parenthesis

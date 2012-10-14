@@ -4,6 +4,7 @@
    22.3
    a
    3.
+   "this is a string"
    4.0
    (dave
      1
