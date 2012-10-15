@@ -100,6 +100,8 @@ func lexOpenParen(l *lexer) (stateFn, error) {
 		return lexWhitespace, nil
 	case '(':
 		return lexOpenParen, nil
+    case ')':
+        return lexCloseParen, nil
 	case ';':
 		return lexComment, nil
 	}
@@ -127,6 +129,8 @@ func lexWhitespace(l *lexer) (stateFn, error) {
 		return lexString, nil
 	case '(':
 		return lexOpenParen, nil
+    case ')':
+        return lexCloseParen, nil
 	case ';':
 		return lexComment, nil
 	}
@@ -312,7 +316,7 @@ func args() {
 	}
 	defer f.Close()
 
-	c := make(chan token)
+	c := make(chan token, 32)
 	go lex(bufio.NewReader(f), c)
 
 	for s := range c {
@@ -348,7 +352,7 @@ func main() {
             continue
         }
 
-        c := make(chan token)
+        c := make(chan token, 32)
 		go lexs(string(line) + "\n", c)
         for s := range c {
             fmt.Printf("%11s %s\n", s.t, s.lexeme)
