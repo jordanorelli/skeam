@@ -29,4 +29,14 @@
        (set! x (+ x 1))
        (* x 2))
 
+; ------------------------------------------------------------------------------
+; the following stuff comes directly from the norvig essay, instead of being
+; contrived lexer tests.
+; ------------------------------------------------------------------------------
+
+; define a function and then execute it
 (begin (define r 3) (* 3.141592653 (* r r)))
+
+; same thing, alternative form without "begin"
+(define area (lambda (r) (* 3.141592653 (* r r))))
+(area 3)
