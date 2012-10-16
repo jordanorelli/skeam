@@ -10,27 +10,27 @@ type typ3 int
 
 const (
 	invalid typ3 = iota
-	int3ger
-	symbol
-	openParen
-	closeParen
-	str1ng
-	fl0at
+	integerToken
+	symbolToken
+	openParenToken
+	closeParenToken
+	stringToken
+	floatToken
 )
 
 func (t typ3) String() string {
 	switch t {
-	case int3ger:
+	case integerToken:
 		return "integer"
-	case symbol:
+	case symbolToken:
 		return "symbol"
-	case openParen:
+	case openParenToken:
 		return "open_paren"
-	case closeParen:
+	case closeParenToken:
 		return "close_paren"
-	case str1ng:
+	case stringToken:
 		return "string"
-	case fl0at:
+	case floatToken:
 		return "float"
 	}
 	panic("wtf")
@@ -85,7 +85,7 @@ func debugPrint(s string) {
 // lexes an open parenthesis
 func lexOpenParen(l *lexer) (stateFn, error) {
 	debugPrint("-->lexOpenParen")
-	l.out <- token{"(", openParen}
+	l.out <- token{"(", openParenToken}
 	l.depth++
 	r, _, err := l.ReadRune()
 	if err != nil {
@@ -146,7 +146,7 @@ func lexString(l *lexer) (stateFn, error) {
 	}
 	switch r {
 	case '"':
-		l.emit(str1ng)
+		l.emit(stringToken)
 		return lexWhitespace, nil
 	case '\\':
 		return lexStringEsc, nil
@@ -177,16 +177,16 @@ func lexInt(l *lexer) (stateFn, error) {
 	}
 	switch r {
 	case ' ', '\t', '\n', '\r':
-		l.emit(int3ger)
+		l.emit(integerToken)
 		return lexWhitespace, nil
 	case '.':
 		l.append(r)
 		return lexFloat, nil
 	case ')':
-		l.emit(int3ger)
+		l.emit(integerToken)
 		return lexCloseParen, nil
 	case ';':
-		l.emit(int3ger)
+		l.emit(integerToken)
 		return lexComment, nil
 	}
 	if isDigit(r) {
@@ -207,13 +207,13 @@ func lexFloat(l *lexer) (stateFn, error) {
 
 	switch r {
 	case ' ', '\t', '\n', '\r':
-		l.emit(fl0at)
+		l.emit(floatToken)
 		return lexWhitespace, nil
 	case ')':
-		l.emit(fl0at)
+		l.emit(floatToken)
 		return lexCloseParen, nil
 	case ';':
-		l.emit(fl0at)
+		l.emit(floatToken)
 		return lexComment, nil
 	}
 	if isDigit(r) {
@@ -234,13 +234,13 @@ func lexSymbol(l *lexer) (stateFn, error) {
 	switch r {
 	case ' ', '\t', '\n', '\r':
 		debugPrint("ending lexSymbol on whitespace")
-		l.emit(symbol)
+		l.emit(symbolToken)
 		return lexWhitespace, nil
 	case ')':
-		l.emit(symbol)
+		l.emit(symbolToken)
 		return lexCloseParen, nil
 	case ';':
-		l.emit(symbol)
+		l.emit(symbolToken)
 		return lexComment, nil
 	default:
 		l.append(r)
@@ -252,7 +252,7 @@ func lexSymbol(l *lexer) (stateFn, error) {
 // lex a close parenthesis
 func lexCloseParen(l *lexer) (stateFn, error) {
 	debugPrint("-->lexCloseParen")
-	l.out <- token{")", closeParen}
+	l.out <- token{")", closeParenToken}
 	l.depth--
 	r, _, err := l.ReadRune()
 	if err != nil {
