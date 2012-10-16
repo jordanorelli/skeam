@@ -1,9 +1,9 @@
 package main
 
 import (
-    "io"
-    "fmt"
-    "strings"
+	"fmt"
+	"io"
+	"strings"
 )
 
 type typ3 int
