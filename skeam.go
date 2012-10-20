@@ -15,6 +15,12 @@ type sexp []interface{}
 
 type symbol string
 
+var universe = environment{
+	"int":    5,
+	"float":  3.14,
+	"string": "Jordan",
+}
+
 // parses the string lexeme into a value that can be eval'd
 func atom(t token) (interface{}, error) {
 	switch t.t {
@@ -84,18 +90,30 @@ func parse(c chan token) (interface{}, error) {
 	return nil, io.EOF
 }
 
-func eval(v interface{}) {
-	fmt.Println(v)
+func eval(v interface{}, env environment) error {
+	switch t := v.(type) {
+	case symbol:
+		s, err := env.get(t)
+		if err != nil {
+			return err
+		}
+		return eval(s, env)
+	default:
+		fmt.Println(v)
+	}
+	return nil
 }
 
-func evalall(c chan token) {
+func evalall(c chan token, env environment) {
 	for {
 		v, err := parse(c)
 		switch err {
 		case io.EOF:
 			return
 		case nil:
-			eval(v)
+			if err := eval(v, env); err != nil {
+				fmt.Println("error:", err)
+			}
 		default:
 			fmt.Println("error in eval: %v", err)
 		}
@@ -113,7 +131,7 @@ func args() {
 
 	c := make(chan token, 32)
 	go lex(bufio.NewReader(f), c)
-	evalall(c)
+	evalall(c, universe)
 }
 
 func main() {
@@ -142,6 +160,6 @@ func main() {
 
 		c := make(chan token, 32)
 		go lexs(string(line)+"\n", c)
-		evalall(c)
+		evalall(c, universe)
 	}
 }
