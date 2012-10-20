@@ -17,10 +17,12 @@ type sexp []interface{}
 type symbol string
 
 var universe = environment{
-	"int":    5,
-	"float":  3.14,
+	"int":    int64(5),
+	"float":  float64(3.14),
 	"string": "Jordan",
 	"+":      proc(addition),
+	"-":      proc(subtraction),
+	"*":      proc(multiplication),
 }
 
 // parses the string lexeme into a value that can be eval'd

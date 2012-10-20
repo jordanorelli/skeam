@@ -1,40 +1,42 @@
 package main
 
-import (
-	"fmt"
-	"reflect"
-)
-
 type proc func(...interface{}) (interface{}, error)
 
 func addition(vals ...interface{}) (interface{}, error) {
-	addFloats := false
-	var accf float64
-	var acc int64
-
-	for _, raw := range vals {
-		switch v := raw.(type) {
-		case int64:
-			if addFloats {
-				accf += float64(v)
-			} else {
-				acc += v
-			}
-		case float64:
-			if !addFloats {
-				addFloats = true
-				accf += float64(acc)
-			}
-			accf += v
-		default:
-			return nil, fmt.Errorf("addition is not defined for %v", reflect.TypeOf(v))
-		}
+	a := accumulator{
+		name: "addition",
+		floatFn: func(left, right float64) float64 {
+			return left + right
+		},
+		intFn: func(left, right int64) int64 {
+			return left + right
+		},
 	}
+	return a.total(vals...)
+}
 
-	if addFloats {
-		return accf, nil
-	} else {
-		return acc, nil
+func subtraction(vals ...interface{}) (interface{}, error) {
+	a := accumulator{
+		name: "subtraction",
+		floatFn: func(left, right float64) float64 {
+			return left - right
+		},
+		intFn: func(left, right int64) int64 {
+			return left - right
+		},
 	}
-	panic("not reached")
+	return a.total(vals...)
+}
+
+func multiplication(vals ...interface{}) (interface{}, error) {
+	a := accumulator{
+		name: "multiplication",
+		floatFn: func(left, right float64) float64 {
+			return left * right
+		},
+		intFn: func(left, right int64) int64 {
+			return left * right
+		},
+	}
+	return a.total(vals...)
 }
