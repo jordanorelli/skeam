@@ -16,14 +16,12 @@ type sexp []interface{}
 
 type symbol string
 
-var universe = environment{
-	"int":    int64(5),
-	"float":  float64(3.14),
-	"string": "Jordan",
+var universe = &environment{
 	"+":      proc(addition),
 	"-":      proc(subtraction),
 	"*":      proc(multiplication),
 	"/":      proc(division),
+	"define": special(define),
 }
 
 // parses the string lexeme into a value that can be eval'd
@@ -95,7 +93,7 @@ func parse(c chan token) (interface{}, error) {
 	return nil, io.EOF
 }
 
-func eval(v interface{}, env environment) (interface{}, error) {
+func eval(v interface{}, env *environment) (interface{}, error) {
 	switch t := v.(type) {
 
 	case symbol:
@@ -112,14 +110,24 @@ func eval(v interface{}, env environment) (interface{}, error) {
 			return nil, errors.New("illegal evaluation of empty sexp ()")
 		}
 
+		// get first element as symbol
 		s, ok := t[0].(symbol)
 		if !ok {
 			return nil, errors.New("expected a symbol")
 		}
 
+		// resolve symbol
 		v, err := env.get(s)
 		if err != nil {
 			return nil, err
+		}
+
+		if spec, ok := v.(special); ok {
+			if len(t) > 1 {
+				return spec(env, t[1:]...)
+			} else {
+				return spec(env)
+			}
 		}
 
 		p, ok := v.(proc)
@@ -156,7 +164,7 @@ func eval(v interface{}, env environment) (interface{}, error) {
 	return nil, nil
 }
 
-func evalall(c chan token, env environment) {
+func evalall(c chan token, env *environment) {
 	for {
 		v, err := parse(c)
 		switch err {

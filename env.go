@@ -20,3 +20,7 @@ func (e environment) get(key symbol) (interface{}, error) {
 	}
 	return nil, UnknownSymbolError{key}
 }
+
+func (e environment) set(key symbol, val interface{}) {
+	e[key] = val
+}
