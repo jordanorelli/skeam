@@ -78,7 +78,7 @@ func isDigit(r rune) bool {
 
 func debugPrint(s string) {
 	if DEBUG {
-		fmt.Println(s)
+		fmt.Println("#", s)
 	}
 }
 

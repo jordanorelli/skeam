@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"strconv"
 )
 
@@ -19,6 +20,7 @@ var universe = environment{
 	"int":    5,
 	"float":  3.14,
 	"string": "Jordan",
+	"+":      proc(addition),
 }
 
 // parses the string lexeme into a value that can be eval'd
@@ -90,18 +92,65 @@ func parse(c chan token) (interface{}, error) {
 	return nil, io.EOF
 }
 
-func eval(v interface{}, env environment) error {
+func eval(v interface{}, env environment) (interface{}, error) {
 	switch t := v.(type) {
+
 	case symbol:
+		debugPrint("eval symbol")
 		s, err := env.get(t)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		return eval(s, env)
+
+	case sexp:
+		debugPrint("eval sexp")
+		if len(t) == 0 {
+			return nil, errors.New("illegal evaluation of empty sexp ()")
+		}
+
+		s, ok := t[0].(symbol)
+		if !ok {
+			return nil, errors.New("expected a symbol")
+		}
+
+		v, err := env.get(s)
+		if err != nil {
+			return nil, err
+		}
+
+		p, ok := v.(proc)
+		if !ok {
+			return nil, fmt.Errorf("expected proc, found %v", reflect.TypeOf(v))
+		}
+
+		if len(t) > 1 {
+			args := make([]interface{}, 0, len(t)-1)
+			for _, raw := range t[1:] {
+				v, err := eval(raw, env)
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, v)
+			}
+			inner, err := p(args...)
+			if err != nil {
+				return nil, err
+			}
+			return eval(inner, env)
+		}
+
+		inner, err := p()
+		if err != nil {
+			return nil, err
+		}
+
+		return eval(inner, env)
+
 	default:
-		fmt.Println(v)
+		return v, nil
 	}
-	return nil
+	return nil, nil
 }
 
 func evalall(c chan token, env environment) {
@@ -111,8 +160,10 @@ func evalall(c chan token, env environment) {
 		case io.EOF:
 			return
 		case nil:
-			if err := eval(v, env); err != nil {
+			if v, err := eval(v, env); err != nil {
 				fmt.Println("error:", err)
+			} else {
+				fmt.Println(v)
 			}
 		default:
 			fmt.Println("error in eval: %v", err)
@@ -135,6 +186,9 @@ func args() {
 }
 
 func main() {
+	if DEBUG {
+		fmt.Println(universe)
+	}
 	if len(os.Args) > 1 {
 		args()
 		return
