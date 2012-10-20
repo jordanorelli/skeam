@@ -7,8 +7,8 @@ import (
 
 type accumulator struct {
 	name     string
-	floatFn  func(float64, float64) float64
-	intFn    func(int64, int64) int64
+	floatFn  func(float64, float64) (float64, error)
+	intFn    func(int64, int64) (int64, error)
 	acc      int64
 	accf     float64
 	floating bool
@@ -40,21 +40,31 @@ func (a *accumulator) total(vals ...interface{}) (interface{}, error) {
 	for _, raw := range vals[1:] {
 		switch v := raw.(type) {
 		case int64:
+			var err error
 			if a.floating {
-				a.accf = a.floatFn(a.accf, float64(v))
-				break
+				a.accf, err = a.floatFn(a.accf, float64(v))
+			} else {
+				a.acc, err = a.intFn(a.acc, v)
 			}
-			a.acc = a.intFn(a.acc, v)
+			if err != nil {
+				return nil, err
+			}
 		case float64:
-			if !a.floating {
+			var err error
+			if a.floating {
+				a.accf, err = a.floatFn(a.accf, v)
+			} else {
 				a.floating = true
-				a.accf = a.floatFn(a.accf, float64(a.acc))
+				a.accf, err = a.floatFn(a.accf, float64(a.acc))
 			}
-			a.accf = a.floatFn(a.accf, v)
+			if err != nil {
+				return nil, err
+			}
 		default:
 			return nil, fmt.Errorf("%v is not defined for %v", a.name, reflect.TypeOf(v))
 		}
 	}
+
 	if a.floating {
 		return a.accf, nil
 	} else {

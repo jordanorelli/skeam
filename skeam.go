@@ -23,6 +23,7 @@ var universe = environment{
 	"+":      proc(addition),
 	"-":      proc(subtraction),
 	"*":      proc(multiplication),
+	"/":      proc(division),
 }
 
 // parses the string lexeme into a value that can be eval'd
