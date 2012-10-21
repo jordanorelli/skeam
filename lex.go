@@ -59,6 +59,9 @@ func (l *lexer) emit(t typ3) {
 	l.buf = nil
 }
 
+// reads a rune from the input and assigns it to the current rune, l.cur.
+// Returns an error if we were unable to read a rune from the input.  I'm
+// pretty sure it's always io.EOF but I'm not positive.
 func (l *lexer) next() error {
 	r, _, err := l.ReadRune()
 	if err != nil {
@@ -68,13 +71,12 @@ func (l *lexer) next() error {
 	return nil
 }
 
-// appends the rune to the current in-progress lexem
-func (l *lexer) append(r rune) {
-	debugPrint(fmt.Sprintf("append %c\n", (r)))
+// stores the current rune in our in-progress lexeme buffer
+func (l *lexer) keep() {
 	if l.buf == nil {
 		l.buf = make([]rune, 0, 32)
 	}
-	l.buf = append(l.buf, r)
+	l.buf = append(l.buf, l.cur)
 }
 
 func isDigit(r rune) bool {
@@ -106,10 +108,10 @@ func lexOpenParen(l *lexer) (stateFn, error) {
 		return lexComment, nil
 	}
 	if isDigit(l.cur) {
-		l.append(l.cur)
+		l.keep()
 		return lexInt, nil
 	}
-	l.append(l.cur)
+	l.keep()
 	return lexSymbol, nil
 }
 
@@ -131,13 +133,16 @@ func lexWhitespace(l *lexer) (stateFn, error) {
 		return lexComment, nil
 	}
 	if isDigit(l.cur) {
-		l.append(l.cur)
+		l.keep()
 		return lexInt, nil
 	}
-	l.append(l.cur)
+	l.keep()
 	return lexSymbol, nil
 }
 
+// lexes an in-progress string.  Basically we just keep all of the tokens until
+// we see a double-quote character, signifying the end of the string.  We also
+// switch into escape mode if we come across a backslash.
 func lexString(l *lexer) (stateFn, error) {
 	debugPrint("-->lexString")
 	switch l.cur {
@@ -147,14 +152,15 @@ func lexString(l *lexer) (stateFn, error) {
 	case '\\':
 		return lexStringEsc, nil
 	}
-	l.append(l.cur)
+	l.keep()
 	return lexString, nil
 }
 
-// lex the character *after* the string escape character \
+// lex the character *after* the string escape character \.  We always keep the
+// next character, then just go back to string lexing.
 func lexStringEsc(l *lexer) (stateFn, error) {
 	debugPrint("-->lexStringEsc")
-	l.append(l.cur)
+	l.keep()
 	return lexString, nil
 }
 
@@ -168,7 +174,7 @@ func lexInt(l *lexer) (stateFn, error) {
 		l.emit(integerToken)
 		return lexWhitespace, nil
 	case '.':
-		l.append(l.cur)
+		l.keep()
 		return lexFloat, nil
 	case ')':
 		l.emit(integerToken)
@@ -178,7 +184,7 @@ func lexInt(l *lexer) (stateFn, error) {
 		return lexComment, nil
 	}
 	if isDigit(l.cur) {
-		l.append(l.cur)
+		l.keep()
 		return lexInt, nil
 	}
 	return nil, fmt.Errorf("unexpected rune in lexInt: %c", l.cur)
@@ -200,7 +206,7 @@ func lexFloat(l *lexer) (stateFn, error) {
 		return lexComment, nil
 	}
 	if isDigit(l.cur) {
-		l.append(l.cur)
+		l.keep()
 		return lexFloat, nil
 	}
 	return nil, fmt.Errorf("unexpected rune in lexFloat: %c", l.cur)
@@ -221,7 +227,7 @@ func lexSymbol(l *lexer) (stateFn, error) {
 		l.emit(symbolToken)
 		return lexComment, nil
 	default:
-		l.append(l.cur)
+		l.keep()
 		return lexSymbol, nil
 	}
 	panic("not reached")
@@ -275,6 +281,8 @@ func lex(input io.RuneReader, c chan token) {
 		fmt.Println(err)
 	}
 }
+
+// lexes a lispy string onto a token channel
 func lexs(input string, c chan token) {
 	lex(strings.NewReader(input), c)
 }
