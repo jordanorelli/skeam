@@ -28,13 +28,14 @@ var universe = &environment{map[symbol]interface{}{
 	"*":      builtin(multiplication),
 	"/":      builtin(division),
 	"length": builtin(length),
+	"list":   builtin(list),
 	"not":    builtin(not),
-	"define": special(define),
-	"quote":  special(quote),
-	"if":     special(_if),
-	"set!":   special(set),
-	"lambda": special(mklambda),
 	"begin":  special(begin),
+	"define": special(define),
+	"if":     special(_if),
+	"lambda": special(mklambda),
+	"quote":  special(quote),
+	"set!":   special(set),
 }, nil}
 
 // parses the string lexeme into a value that can be eval'd

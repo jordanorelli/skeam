@@ -107,8 +107,6 @@ func length(vals []interface{}) (interface{}, error) {
 	return len(x), nil
 }
 
-/*
-func car(vals []interface{}) (interface{}, error) {
-
+func list(vals []interface{}) (interface{}, error) {
+	return sexp(vals), nil
 }
-*/
