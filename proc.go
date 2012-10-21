@@ -63,6 +63,8 @@ func multiplication(vals []interface{}) (interface{}, error) {
 		intFn: func(left, right int64) (int64, error) {
 			return left * right, nil
 		},
+		acc:  1,
+		accf: 1.0,
 	}
 	return a.total(vals)
 }

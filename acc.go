@@ -16,7 +16,7 @@ type accumulator struct {
 
 func (a *accumulator) total(vals []interface{}) (interface{}, error) {
 	if vals == nil || len(vals) == 0 {
-		return int64(0), nil
+		return a.acc, nil
 	}
 
 	switch v := vals[0].(type) {
