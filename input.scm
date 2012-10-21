@@ -12,8 +12,8 @@
 "jordan"
 
 ; booleans.  I don't like the look of #t and #f.  They're dumb.
-true
-false
+#t
+#f
 
 ; ------------------------------------------------------------------------------
 ; basic math
@@ -30,9 +30,10 @@ false
 
 (define x 5)
 x
+(set! x "steve")
+x
 
 (quote 1 2 3)
 
-(if 1 2 3)
-(if false 2 3)
-(if true 2 3)
+(if #f (quote "true-value") (quote "false-value"))
+(if #t (quote "true-value") (quote "false-value"))

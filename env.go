@@ -24,3 +24,8 @@ func (e environment) get(key symbol) (interface{}, error) {
 func (e environment) set(key symbol, val interface{}) {
 	e[key] = val
 }
+
+func (e environment) defined(key symbol) bool {
+	_, ok := e[key]
+	return ok
+}
