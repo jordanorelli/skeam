@@ -23,10 +23,10 @@ type symbol string
 var universe = &environment{map[symbol]interface{}{
 	"#t":     true,
 	"#f":     false,
-	"+":      proc(addition),
-	"-":      proc(subtraction),
-	"*":      proc(multiplication),
-	"/":      proc(division),
+	"+":      builtin(addition),
+	"-":      builtin(subtraction),
+	"*":      builtin(multiplication),
+	"/":      builtin(division),
 	"define": special(define),
 	"quote":  special(quote),
 	"if":     special(_if),
@@ -139,9 +139,9 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 			}
 		}
 
-		p, ok := v.(proc)
+		fn, ok := v.(builtin)
 		if !ok {
-			return nil, fmt.Errorf("expected proc, found %v", reflect.TypeOf(v))
+			return nil, fmt.Errorf("expected builtin, found %v", reflect.TypeOf(v))
 		}
 
 		if len(t) > 1 {
@@ -153,14 +153,14 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 				}
 				args = append(args, v)
 			}
-			inner, err := p(args...)
+			inner, err := fn(args...)
 			if err != nil {
 				return nil, err
 			}
 			return eval(inner, env)
 		}
 
-		inner, err := p()
+		inner, err := fn()
 		if err != nil {
 			return nil, err
 		}

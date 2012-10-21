@@ -4,7 +4,7 @@ import (
 	"errors"
 )
 
-type proc func(...interface{}) (interface{}, error)
+type builtin func(...interface{}) (interface{}, error)
 
 func addition(vals ...interface{}) (interface{}, error) {
 	a := accumulator{
