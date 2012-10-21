@@ -120,14 +120,8 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 			return nil, errors.New("illegal evaluation of empty sexp ()")
 		}
 
-		// get first element as symbol
-		s, ok := t[0].(symbol)
-		if !ok {
-			return nil, errors.New("expected a symbol")
-		}
-
-		// resolve symbol
-		v, err := env.get(s)
+		// eval the first item
+		v, err := eval(t[0], env)
 		if err != nil {
 			return nil, err
 		}
@@ -150,6 +144,7 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 			}
 		}
 
+		// exec lambda if possible
 		if l, ok := v.(lambda); ok {
 			if len(t) > 1 {
 				return l.call(env, t[1:])
@@ -182,7 +177,7 @@ func evalall(c chan token, env *environment) {
 				}
 			}
 		default:
-			fmt.Println("error in eval: %v", err)
+			fmt.Printf("error in eval: %v\n", err)
 		}
 	}
 }
