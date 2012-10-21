@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-type typ3 int
+type tokenType int
 
 const (
-	invalid typ3 = iota
+	invalidToken tokenType = iota
 	integerToken
 	symbolToken
 	openParenToken
@@ -18,7 +18,7 @@ const (
 	floatToken
 )
 
-func (t typ3) String() string {
+func (t tokenType) String() string {
 	switch t {
 	case integerToken:
 		return "integer"
@@ -38,7 +38,7 @@ func (t typ3) String() string {
 
 type token struct {
 	lexeme string
-	t      typ3
+	t      tokenType
 }
 
 type stateFn func(*lexer) (stateFn, error)
@@ -53,7 +53,7 @@ type lexer struct {
 // clears the current lexem buffer and emits a token of the given type.
 // There's no sanity checking to make sure you don't emit some bullshit, so
 // don't fuck it up.
-func (l *lexer) emit(t typ3) {
+func (l *lexer) emit(t tokenType) {
 	debugPrint("emit " + string(l.buf))
 	l.out <- token{lexeme: string(l.buf), t: t}
 	l.buf = nil
