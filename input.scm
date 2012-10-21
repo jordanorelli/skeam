@@ -53,3 +53,7 @@ x
 (define a1 (make-account 100.00))
 (a1 -20.00)
 
+(not "dave")
+(if (not #f) (quote "true-condition") (quote "false-condition"))
+
+(length (quote (1 2 3)))

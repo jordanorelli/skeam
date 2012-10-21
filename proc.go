@@ -2,6 +2,8 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
 )
 
 type builtin func([]interface{}) (interface{}, error)
@@ -90,3 +92,21 @@ func not(vals []interface{}) (interface{}, error) {
 	}
 	return !booleanize(vals[0]), nil
 }
+
+func length(vals []interface{}) (interface{}, error) {
+	if err := checkArity(1, vals, "length"); err != nil {
+		return nil, err
+	}
+
+	x, ok := vals[0].(sexp)
+	if !ok {
+		return nil, fmt.Errorf("first argument must be sexp, received %v", reflect.TypeOf(vals[0]))
+	}
+	return len(x), nil
+}
+
+/*
+func car(vals []interface{}) (interface{}, error) {
+
+}
+*/
