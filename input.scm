@@ -40,3 +40,5 @@ x
 
 (define plusone (lambda (x) (+ x 1)))
 (plusone 1)
+
+((lambda (x) (* x x)) 4)

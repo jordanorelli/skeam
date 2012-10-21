@@ -8,15 +8,28 @@ import (
 
 type special func(*environment, ...interface{}) (interface{}, error)
 
-type nargsInvalidError struct {
+type arityError struct {
 	expected int
 	received int
 	name     string
 }
 
-func (n nargsInvalidError) Error() string {
+func (n arityError) Error() string {
 	return fmt.Sprintf(`received %d arguments in *%v*, expected %d`,
 		n.received, n.name, n.expected)
+}
+
+func checkArity(arity int, args []interface{}, name string) error {
+	if args == nil {
+		if arity == 0 {
+			return nil
+		}
+		return arityError{arity, 0, name}
+	}
+	if len(args) != arity {
+		return arityError{arity, len(args), name}
+	}
+	return nil
 }
 
 // defines the built-in "define" construct.  e.g.:
@@ -25,8 +38,8 @@ func (n nargsInvalidError) Error() string {
 //
 // would create the symbol "x" and set its value to 5.
 func define(env *environment, args ...interface{}) (interface{}, error) {
-	if len(args) != 2 {
-		return nil, nargsInvalidError{2, len(args), "define"}
+	if err := checkArity(2, args, "define"); err != nil {
+		return nil, err
 	}
 
 	s, ok := args[0].(symbol)
@@ -51,8 +64,8 @@ func define(env *environment, args ...interface{}) (interface{}, error) {
 // that is effectively a no-op; the input value is not evaluated, which
 // prevents evaluation of the first element of the list, in this case 1.
 func quote(_ *environment, args ...interface{}) (interface{}, error) {
-	if len(args) != 1 {
-		return nil, nargsInvalidError{1, len(args), "quote"}
+	if err := checkArity(1, args, "quote"); err != nil {
+		return nil, err
 	}
 
 	return args[0], nil
@@ -68,8 +81,8 @@ func quote(_ *environment, args ...interface{}) (interface{}, error) {
 //
 // would evaluate to "bar"
 func _if(env *environment, args ...interface{}) (interface{}, error) {
-	if len(args) != 3 {
-		return nil, nargsInvalidError{3, len(args), "if"}
+	if err := checkArity(3, args, "if"); err != nil {
+		return nil, err
 	}
 
 	v, err := eval(args[0], env)
@@ -91,8 +104,8 @@ func _if(env *environment, args ...interface{}) (interface{}, error) {
 // would set the symbol x to the value 5, if and only if the symbol x was
 // previously defined.
 func set(env *environment, args ...interface{}) (interface{}, error) {
-	if len(args) != 2 {
-		return nil, nargsInvalidError{2, len(args), "set!"}
+	if err := checkArity(2, args, "set!"); err != nil {
+		return nil, err
 	}
 
 	s, ok := args[0].(symbol)
@@ -149,8 +162,8 @@ func (l lambda) call(env *environment, rawArgs []interface{}) (interface{}, erro
 // would evaluate to a lambda that, when executed, squares its input.
 func mklambda(env *environment, args ...interface{}) (interface{}, error) {
 	debugPrint("mklambda")
-	if len(args) != 2 {
-		return nil, nargsInvalidError{2, len(args), "lambda"}
+	if err := checkArity(2, args, "lambda"); err != nil {
+		return nil, err
 	}
 
 	params, ok := args[0].(sexp)
