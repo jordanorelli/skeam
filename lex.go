@@ -45,10 +45,9 @@ type stateFn func(*lexer) (stateFn, error)
 
 type lexer struct {
 	io.RuneReader
-	buf   []rune
-	cur   rune
-	depth int
-	out   chan token
+	buf []rune
+	cur rune
+	out chan token
 }
 
 // clears the current lexem buffer and emits a token of the given type.
@@ -96,7 +95,6 @@ func debugPrint(s string) {
 func lexOpenParen(l *lexer) (stateFn, error) {
 	debugPrint("-->lexOpenParen")
 	l.out <- token{"(", openParenToken}
-	l.depth++
 	switch l.cur {
 	case ' ', '\t', '\n', '\r':
 		return lexWhitespace, nil
@@ -233,7 +231,6 @@ func lexSymbol(l *lexer) (stateFn, error) {
 func lexCloseParen(l *lexer) (stateFn, error) {
 	debugPrint("-->lexCloseParen")
 	l.out <- token{")", closeParenToken}
-	l.depth--
 	switch l.cur {
 	case ' ', '\t', '\n', '\r':
 		return lexWhitespace, nil
@@ -260,7 +257,7 @@ func lexComment(l *lexer) (stateFn, error) {
 // new tokens.
 func lex(input io.RuneReader, c chan token) {
 	defer close(c)
-	l := &lexer{input, nil, ' ', 0, c}
+	l := &lexer{input, nil, ' ', c}
 
 	var err error
 	f := stateFn(lexWhitespace)
@@ -276,9 +273,6 @@ func lex(input io.RuneReader, c chan token) {
 	}
 	if err != io.EOF {
 		fmt.Println(err)
-	}
-	if l.depth != 0 {
-		fmt.Println("error: unbalanced parenthesis")
 	}
 }
 func lexs(input string, c chan token) {
