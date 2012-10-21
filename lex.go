@@ -59,6 +59,11 @@ func (l *lexer) emit(t typ3) {
 	l.cur = nil
 }
 
+func (l *lexer) nextRune() (rune, error) {
+	r, _, err := l.ReadRune()
+	return r, err
+}
+
 // appends the rune to the current in-progress lexem
 func (l *lexer) append(r rune) {
 	debugPrint(fmt.Sprintf("append %c\n", (r)))
@@ -87,7 +92,7 @@ func lexOpenParen(l *lexer) (stateFn, error) {
 	debugPrint("-->lexOpenParen")
 	l.out <- token{"(", openParenToken}
 	l.depth++
-	r, _, err := l.ReadRune()
+	r, err := l.nextRune()
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +119,7 @@ func lexOpenParen(l *lexer) (stateFn, error) {
 // "wrong" but who honestly gives a shit.
 func lexWhitespace(l *lexer) (stateFn, error) {
 	debugPrint("-->lexWhitespace")
-	r, _, err := l.ReadRune()
+	r, err := l.nextRune()
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +145,7 @@ func lexWhitespace(l *lexer) (stateFn, error) {
 
 func lexString(l *lexer) (stateFn, error) {
 	debugPrint("-->lexString")
-	r, _, err := l.ReadRune()
+	r, err := l.nextRune()
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +163,7 @@ func lexString(l *lexer) (stateFn, error) {
 // lex the character *after* the string escape character \
 func lexStringEsc(l *lexer) (stateFn, error) {
 	debugPrint("-->lexStringEsc")
-	r, _, err := l.ReadRune()
+	r, err := l.nextRune()
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +176,7 @@ func lexStringEsc(l *lexer) (stateFn, error) {
 // digits.  Everything else is crap.
 func lexInt(l *lexer) (stateFn, error) {
 	debugPrint("-->lexInt")
-	r, _, err := l.ReadRune()
+	r, err := l.nextRune()
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +205,7 @@ func lexInt(l *lexer) (stateFn, error) {
 // paren.
 func lexFloat(l *lexer) (stateFn, error) {
 	debugPrint("-->lexFloat")
-	r, _, err := l.ReadRune()
+	r, err := l.nextRune()
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +231,7 @@ func lexFloat(l *lexer) (stateFn, error) {
 // lexes a symbol in progress
 func lexSymbol(l *lexer) (stateFn, error) {
 	debugPrint("-->lexSymbol")
-	r, _, err := l.ReadRune()
+	r, err := l.nextRune()
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +259,7 @@ func lexCloseParen(l *lexer) (stateFn, error) {
 	debugPrint("-->lexCloseParen")
 	l.out <- token{")", closeParenToken}
 	l.depth--
-	r, _, err := l.ReadRune()
+	r, err := l.nextRune()
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +277,7 @@ func lexCloseParen(l *lexer) (stateFn, error) {
 // lexes a comment
 func lexComment(l *lexer) (stateFn, error) {
 	debugPrint("-->lexComment")
-	r, _, err := l.ReadRune()
+	r, err := l.nextRune()
 	if err != nil {
 		return nil, err
 	}
