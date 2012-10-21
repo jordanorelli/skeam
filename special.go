@@ -7,9 +7,19 @@ import (
 
 type special func(*environment, ...interface{}) (interface{}, error)
 
+type nargsInvalidError struct {
+	expected int
+	received int
+	name     string
+}
+
+func (n nargsInvalidError) Error() string {
+	return fmt.Sprintf(`received %d arguments in *%v*, expected %d`, n.received, n.name, n.expected)
+}
+
 func define(env *environment, args ...interface{}) (interface{}, error) {
 	if len(args) != 2 {
-		return nil, fmt.Errorf(`received %d arguments in *define*, expected exactly 2`, len(args))
+		return nil, nargsInvalidError{2, len(args), "define"}
 	}
 	s, ok := args[0].(symbol)
 	if !ok {
@@ -24,12 +34,15 @@ func define(env *environment, args ...interface{}) (interface{}, error) {
 }
 
 func quote(_ *environment, args ...interface{}) (interface{}, error) {
-	return sexp(args), nil
+	if len(args) != 1 {
+		return nil, nargsInvalidError{1, len(args), "quote"}
+	}
+	return args[0], nil
 }
 
 func _if(env *environment, args ...interface{}) (interface{}, error) {
 	if len(args) != 3 {
-		return nil, fmt.Errorf(`received %d arguments in *if*, expected exactly 3`, len(args))
+		return nil, nargsInvalidError{3, len(args), "if"}
 	}
 	v, err := eval(args[0], env)
 	if err != nil {
@@ -43,7 +56,7 @@ func _if(env *environment, args ...interface{}) (interface{}, error) {
 
 func set(env *environment, args ...interface{}) (interface{}, error) {
 	if len(args) != 2 {
-		return nil, fmt.Errorf(`received %d arguments in *set!*, expected exactly 2`, len(args))
+		return nil, nargsInvalidError{2, len(args), "set!"}
 	}
 	s, ok := args[0].(symbol)
 	if !ok {

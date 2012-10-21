@@ -33,7 +33,7 @@ x
 (set! x "steve")
 x
 
-(quote 1 2 3)
+(quote (1 2 3))
 
 (if #f (quote "true-value") (quote "false-value"))
 (if #t (quote "true-value") (quote "false-value"))
