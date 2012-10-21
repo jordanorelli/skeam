@@ -21,12 +21,15 @@ func (s sexp) String() string {
 type symbol string
 
 var universe = &environment{
+	"true":   true,
+	"false":  false,
 	"+":      proc(addition),
 	"-":      proc(subtraction),
 	"*":      proc(multiplication),
 	"/":      proc(division),
 	"define": special(define),
 	"quote":  special(quote),
+	"if":     special(_if),
 }
 
 // parses the string lexeme into a value that can be eval'd
@@ -178,6 +181,7 @@ func evalall(c chan token, env *environment) {
 		case nil:
 			if v, err := eval(v, env); err != nil {
 				fmt.Println("error:", err)
+				return
 			} else {
 				fmt.Println(v)
 			}

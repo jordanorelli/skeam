@@ -22,3 +22,17 @@ func define(env *environment, args ...interface{}) (interface{}, error) {
 func quote(_ *environment, args ...interface{}) (interface{}, error) {
 	return sexp(args), nil
 }
+
+func _if(env *environment, args ...interface{}) (interface{}, error) {
+	if len(args) != 3 {
+		return nil, fmt.Errorf(`received %d arguments in *if*, expected exactly 3`, len(args))
+	}
+	v, err := eval(args[0], env)
+	if err != nil {
+		return nil, err
+	}
+	if b, ok := v.(bool); ok && !b {
+		return eval(args[2], env)
+	}
+	return eval(args[1], env)
+}
