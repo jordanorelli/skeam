@@ -45,7 +45,8 @@ type stateFn func(*lexer) (stateFn, error)
 
 type lexer struct {
 	io.RuneReader
-	cur   []rune
+	buf   []rune
+	cur   rune
 	depth int
 	out   chan token
 }
@@ -54,23 +55,27 @@ type lexer struct {
 // There's no sanity checking to make sure you don't emit some bullshit, so
 // don't fuck it up.
 func (l *lexer) emit(t typ3) {
-	debugPrint("emit " + string(l.cur))
-	l.out <- token{lexeme: string(l.cur), t: t}
-	l.cur = nil
+	debugPrint("emit " + string(l.buf))
+	l.out <- token{lexeme: string(l.buf), t: t}
+	l.buf = nil
 }
 
-func (l *lexer) nextRune() (rune, error) {
+func (l *lexer) next() error {
 	r, _, err := l.ReadRune()
-	return r, err
+	if err != nil {
+		return err
+	}
+	l.cur = r
+	return nil
 }
 
 // appends the rune to the current in-progress lexem
 func (l *lexer) append(r rune) {
 	debugPrint(fmt.Sprintf("append %c\n", (r)))
-	if l.cur == nil {
-		l.cur = make([]rune, 0, 32)
+	if l.buf == nil {
+		l.buf = make([]rune, 0, 32)
 	}
-	l.cur = append(l.cur, r)
+	l.buf = append(l.buf, r)
 }
 
 func isDigit(r rune) bool {
@@ -92,11 +97,7 @@ func lexOpenParen(l *lexer) (stateFn, error) {
 	debugPrint("-->lexOpenParen")
 	l.out <- token{"(", openParenToken}
 	l.depth++
-	r, err := l.nextRune()
-	if err != nil {
-		return nil, err
-	}
-	switch r {
+	switch l.cur {
 	case ' ', '\t', '\n', '\r':
 		return lexWhitespace, nil
 	case '(':
@@ -106,11 +107,11 @@ func lexOpenParen(l *lexer) (stateFn, error) {
 	case ';':
 		return lexComment, nil
 	}
-	if isDigit(r) {
-		l.append(r)
+	if isDigit(l.cur) {
+		l.append(l.cur)
 		return lexInt, nil
 	}
-	l.append(r)
+	l.append(l.cur)
 	return lexSymbol, nil
 }
 
@@ -119,11 +120,7 @@ func lexOpenParen(l *lexer) (stateFn, error) {
 // "wrong" but who honestly gives a shit.
 func lexWhitespace(l *lexer) (stateFn, error) {
 	debugPrint("-->lexWhitespace")
-	r, err := l.nextRune()
-	if err != nil {
-		return nil, err
-	}
-	switch r {
+	switch l.cur {
 	case ' ', '\t', '\n', '\r':
 		return lexWhitespace, nil
 	case '"':
@@ -135,39 +132,31 @@ func lexWhitespace(l *lexer) (stateFn, error) {
 	case ';':
 		return lexComment, nil
 	}
-	if isDigit(r) {
-		l.append(r)
+	if isDigit(l.cur) {
+		l.append(l.cur)
 		return lexInt, nil
 	}
-	l.append(r)
+	l.append(l.cur)
 	return lexSymbol, nil
 }
 
 func lexString(l *lexer) (stateFn, error) {
 	debugPrint("-->lexString")
-	r, err := l.nextRune()
-	if err != nil {
-		return nil, err
-	}
-	switch r {
+	switch l.cur {
 	case '"':
 		l.emit(stringToken)
 		return lexWhitespace, nil
 	case '\\':
 		return lexStringEsc, nil
 	}
-	l.append(r)
+	l.append(l.cur)
 	return lexString, nil
 }
 
 // lex the character *after* the string escape character \
 func lexStringEsc(l *lexer) (stateFn, error) {
 	debugPrint("-->lexStringEsc")
-	r, err := l.nextRune()
-	if err != nil {
-		return nil, err
-	}
-	l.append(r)
+	l.append(l.cur)
 	return lexString, nil
 }
 
@@ -176,16 +165,12 @@ func lexStringEsc(l *lexer) (stateFn, error) {
 // digits.  Everything else is crap.
 func lexInt(l *lexer) (stateFn, error) {
 	debugPrint("-->lexInt")
-	r, err := l.nextRune()
-	if err != nil {
-		return nil, err
-	}
-	switch r {
+	switch l.cur {
 	case ' ', '\t', '\n', '\r':
 		l.emit(integerToken)
 		return lexWhitespace, nil
 	case '.':
-		l.append(r)
+		l.append(l.cur)
 		return lexFloat, nil
 	case ')':
 		l.emit(integerToken)
@@ -194,23 +179,18 @@ func lexInt(l *lexer) (stateFn, error) {
 		l.emit(integerToken)
 		return lexComment, nil
 	}
-	if isDigit(r) {
-		l.append(r)
+	if isDigit(l.cur) {
+		l.append(l.cur)
 		return lexInt, nil
 	}
-	return nil, fmt.Errorf("unexpected rune in lexInt: %c", r)
+	return nil, fmt.Errorf("unexpected rune in lexInt: %c", l.cur)
 }
 
 // once we're in a float, the only valid values are digits, whitespace or close
 // paren.
 func lexFloat(l *lexer) (stateFn, error) {
 	debugPrint("-->lexFloat")
-	r, err := l.nextRune()
-	if err != nil {
-		return nil, err
-	}
-
-	switch r {
+	switch l.cur {
 	case ' ', '\t', '\n', '\r':
 		l.emit(floatToken)
 		return lexWhitespace, nil
@@ -221,22 +201,17 @@ func lexFloat(l *lexer) (stateFn, error) {
 		l.emit(floatToken)
 		return lexComment, nil
 	}
-	if isDigit(r) {
-		l.append(r)
+	if isDigit(l.cur) {
+		l.append(l.cur)
 		return lexFloat, nil
 	}
-	return nil, fmt.Errorf("unexpected run in lexFloat: %c", r)
+	return nil, fmt.Errorf("unexpected rune in lexFloat: %c", l.cur)
 }
 
 // lexes a symbol in progress
 func lexSymbol(l *lexer) (stateFn, error) {
 	debugPrint("-->lexSymbol")
-	r, err := l.nextRune()
-	if err != nil {
-		return nil, err
-	}
-
-	switch r {
+	switch l.cur {
 	case ' ', '\t', '\n', '\r':
 		debugPrint("ending lexSymbol on whitespace")
 		l.emit(symbolToken)
@@ -248,7 +223,7 @@ func lexSymbol(l *lexer) (stateFn, error) {
 		l.emit(symbolToken)
 		return lexComment, nil
 	default:
-		l.append(r)
+		l.append(l.cur)
 		return lexSymbol, nil
 	}
 	panic("not reached")
@@ -259,11 +234,7 @@ func lexCloseParen(l *lexer) (stateFn, error) {
 	debugPrint("-->lexCloseParen")
 	l.out <- token{")", closeParenToken}
 	l.depth--
-	r, err := l.nextRune()
-	if err != nil {
-		return nil, err
-	}
-	switch r {
+	switch l.cur {
 	case ' ', '\t', '\n', '\r':
 		return lexWhitespace, nil
 	case ')':
@@ -277,11 +248,7 @@ func lexCloseParen(l *lexer) (stateFn, error) {
 // lexes a comment
 func lexComment(l *lexer) (stateFn, error) {
 	debugPrint("-->lexComment")
-	r, err := l.nextRune()
-	if err != nil {
-		return nil, err
-	}
-	switch r {
+	switch l.cur {
 	case '\n', '\r':
 		return lexWhitespace, nil
 	}
@@ -293,12 +260,19 @@ func lexComment(l *lexer) (stateFn, error) {
 // new tokens.
 func lex(input io.RuneReader, c chan token) {
 	defer close(c)
-	l := &lexer{input, nil, 0, c}
+	l := &lexer{input, nil, ' ', 0, c}
 
 	var err error
 	f := stateFn(lexWhitespace)
-	for err == nil {
+	for {
 		f, err = f(l)
+		if err != nil {
+			break
+		}
+		err = l.next()
+		if err != nil {
+			break
+		}
 	}
 	if err != io.EOF {
 		fmt.Println(err)
