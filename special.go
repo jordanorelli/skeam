@@ -6,8 +6,13 @@ import (
 	"reflect"
 )
 
+// type special is a callable outside of the normal execution workflow.  That
+// is, a special receives its arguments unevaluated, unlike lambdas or builtin,
+// both of whose arguments are evaluated upon invocation.
 type special func(*environment, ...interface{}) (interface{}, error)
 
+// type arityError is used to store information related to arity errors.  That
+// is, the invocation of a callable with the wrong number of arguments.
 type arityError struct {
 	expected int
 	received int
@@ -19,6 +24,8 @@ func (n arityError) Error() string {
 		n.received, n.name, n.expected)
 }
 
+// helper function to check the arity of incoming arguments for a function.
+// Also accepts the case that the args slice is nil.
 func checkArity(arity int, args []interface{}, name string) error {
 	if args == nil {
 		if arity == 0 {
@@ -71,6 +78,9 @@ func quote(_ *environment, args ...interface{}) (interface{}, error) {
 	return args[0], nil
 }
 
+// turns an arbitrary lisp value into a boolean.  Apparently the sematics of
+// this in lisp are that everything except false is true?  Seems weird to me,
+// but ok.
 func booleanize(v interface{}) bool {
 	if b, ok := v.(bool); ok {
 		return b
@@ -103,7 +113,7 @@ func _if(env *environment, args ...interface{}) (interface{}, error) {
 	return eval(args[2], env)
 }
 
-// defines the built-in "set" construct, which is used to set the value of an
+// defines the built-in "set!" construct, which is used to set the value of an
 // existing symbol in the provided environment.  e.g.:
 //
 //  (set! x 5)
@@ -195,6 +205,13 @@ func mklambda(env *environment, args ...interface{}) (interface{}, error) {
 	return lambda{env, arglabels, body}, nil
 }
 
+// defines the built-in "begin" construct.  A "begin" statement evaluates each
+// of its inputs, and returns the value of the evaluation of the last
+// statement.  E.g.:
+//
+//  (begin (+ 1 1) (* 2 2) (+ 3 3))
+//
+// would evaluate to 6.
 func begin(env *environment, args ...interface{}) (interface{}, error) {
 	debugPrint("begin")
 
