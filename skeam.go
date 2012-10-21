@@ -14,6 +14,10 @@ var DEBUG = false
 
 type sexp []interface{}
 
+func (s sexp) String() string {
+	return "(" + fmt.Sprint(s...) + ")"
+}
+
 type symbol string
 
 var universe = &environment{
@@ -22,6 +26,7 @@ var universe = &environment{
 	"*":      proc(multiplication),
 	"/":      proc(division),
 	"define": special(define),
+	"quote":  special(quote),
 }
 
 // parses the string lexeme into a value that can be eval'd
