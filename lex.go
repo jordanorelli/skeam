@@ -109,6 +109,26 @@ func lexOpenParen(l *lexer) (stateFn, error) {
 	case '.':
 		l.keep()
 		return lexFloat, nil
+	case '-':
+		l.keep()
+		return lexMinus, nil
+	}
+	if isDigit(l.cur) {
+		l.keep()
+		return lexInt, nil
+	}
+	l.keep()
+	return lexSymbol, nil
+}
+
+func lexMinus(l *lexer) (stateFn, error) {
+	switch l.cur {
+	case ' ', '\t', '\n', '\r':
+		l.emit(symbolToken)
+		return lexWhitespace, nil
+	case '.':
+		l.keep()
+		return lexFloat, nil
 	}
 	if isDigit(l.cur) {
 		l.keep()
@@ -137,6 +157,9 @@ func lexWhitespace(l *lexer) (stateFn, error) {
 	case '.':
 		l.keep()
 		return lexFloat, nil
+	case '-':
+		l.keep()
+		return lexMinus, nil
 	}
 	if isDigit(l.cur) {
 		l.keep()
