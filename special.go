@@ -187,3 +187,18 @@ func mklambda(env *environment, args ...interface{}) (interface{}, error) {
 
 	return lambda{env, arglabels, body}, nil
 }
+
+func begin(env *environment, args ...interface{}) (interface{}, error) {
+	debugPrint("begin")
+
+	var err error
+	var v interface{}
+	for _, arg := range args {
+		v, err = eval(arg, env)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return v, nil
+}

@@ -32,6 +32,7 @@ var universe = &environment{map[symbol]interface{}{
 	"if":     special(_if),
 	"set!":   special(set),
 	"lambda": special(mklambda),
+	"begin":  special(begin),
 }, nil}
 
 // parses the string lexeme into a value that can be eval'd

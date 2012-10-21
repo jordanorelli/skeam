@@ -42,3 +42,13 @@ x
 (plusone 1)
 
 ((lambda (x) (* x x)) 4)
+
+((lambda (x y) (+ x y)) 10 25)
+
+(define make-account
+  (lambda (balance)
+    (lambda (amt)
+      (begin (set! balance (+ balance amt)) balance))))
+
+(define a1 (make-account 100.00))
+(a1 -20.00)
