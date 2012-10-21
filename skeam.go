@@ -20,7 +20,7 @@ func (s sexp) String() string {
 
 type symbol string
 
-var universe = &environment{
+var universe = &environment{map[symbol]interface{}{
 	"#t":     true,
 	"#f":     false,
 	"+":      proc(addition),
@@ -31,7 +31,7 @@ var universe = &environment{
 	"quote":  special(quote),
 	"if":     special(_if),
 	"set!":   special(set),
-}
+}, nil}
 
 // parses the string lexeme into a value that can be eval'd
 func atom(t token) (interface{}, error) {
