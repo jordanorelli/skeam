@@ -57,3 +57,16 @@ x
 (if (not #f) (quote "true-condition") (quote "false-condition"))
 
 (length (quote (1 2 3)))
+
+(list 1 2 3)
+(length (list 1 2 3))
+
+(null? null)
+
+; this one I don't get.  It's supposed to evaluate to false?  What?  Why?
+; Because null is an expression that evaluates to an empty sexp, but it's not,
+; itself, actually null?  What the fuck, lisp?
+(null? (quote null))
+
+(null? (quote ()))
+(null? (list))
