@@ -119,3 +119,16 @@ func islist(vals []interface{}) (interface{}, error) {
 	_, ok := vals[0].(sexp)
 	return ok, nil
 }
+
+func isnull(vals []interface{}) (interface{}, error) {
+	if err := checkArity(1, vals, "null?"); err != nil {
+		return nil, err
+	}
+
+	s, ok := vals[0].(sexp)
+	if !ok {
+		return false, nil
+	}
+
+	return len(s) == 0, nil
+}

@@ -23,6 +23,7 @@ type symbol string
 var universe = &environment{map[symbol]interface{}{
 	"#t":     true,
 	"#f":     false,
+	"null":   nil,
 	"+":      builtin(addition),
 	"-":      builtin(subtraction),
 	"*":      builtin(multiplication),
@@ -31,6 +32,7 @@ var universe = &environment{map[symbol]interface{}{
 	"list":   builtin(list),
 	"list?":  builtin(islist),
 	"not":    builtin(not),
+	"null?":  builtin(isnull),
 	"begin":  special(begin),
 	"define": special(define),
 	"if":     special(_if),
@@ -109,6 +111,10 @@ func parse(c chan token) (interface{}, error) {
 }
 
 func eval(v interface{}, env *environment) (interface{}, error) {
+	if v == nil {
+		return sexp{}, nil
+	}
+
 	switch t := v.(type) {
 
 	case symbol:
@@ -163,7 +169,8 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 	default:
 		return v, nil
 	}
-	return nil, nil
+
+	panic("not reached")
 }
 
 func evalall(c chan token, env *environment) {
