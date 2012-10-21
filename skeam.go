@@ -29,6 +29,7 @@ var universe = &environment{map[symbol]interface{}{
 	"/":      builtin(division),
 	"length": builtin(length),
 	"list":   builtin(list),
+	"list?":  builtin(islist),
 	"not":    builtin(not),
 	"begin":  special(begin),
 	"define": special(define),

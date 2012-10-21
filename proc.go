@@ -110,3 +110,12 @@ func length(vals []interface{}) (interface{}, error) {
 func list(vals []interface{}) (interface{}, error) {
 	return sexp(vals), nil
 }
+
+func islist(vals []interface{}) (interface{}, error) {
+	if err := checkArity(1, vals, "list?"); err != nil {
+		return nil, err
+	}
+
+	_, ok := vals[0].(sexp)
+	return ok, nil
+}
