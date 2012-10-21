@@ -15,6 +15,13 @@ type environment struct {
 	outer *environment
 }
 
+func newEnvironment(outer *environment) *environment {
+	return &environment{
+		items: make(map[symbol]interface{}),
+		outer: outer,
+	}
+}
+
 func (e environment) get(key symbol) (interface{}, error) {
 	v, ok := e.items[key]
 	if ok {

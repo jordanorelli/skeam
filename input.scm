@@ -37,3 +37,6 @@ x
 
 (if #f (quote "true-value") (quote "false-value"))
 (if #t (quote "true-value") (quote "false-value"))
+
+(define plusone (lambda (x) (+ x 1)))
+(plusone 1)

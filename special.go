@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 )
@@ -110,4 +111,66 @@ func set(env *environment, args ...interface{}) (interface{}, error) {
 	env.set(s, v)
 
 	return nil, nil
+}
+
+type lambda struct {
+	env       *environment
+	arglabels []symbol
+	body      sexp
+}
+
+func (l lambda) call(env *environment, rawArgs []interface{}) (interface{}, error) {
+	debugPrint("call lambda")
+
+	args := make([]interface{}, 0, len(rawArgs))
+	for _, raw := range rawArgs {
+		v, err := eval(raw, env)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, v)
+	}
+
+	if len(args) != len(l.arglabels) {
+		return nil, errors.New("parity error")
+	}
+
+	for i := range args {
+		l.env.set(l.arglabels[i], args[i])
+	}
+
+	return eval(l.body, l.env)
+}
+
+// defines the built-in lambda construct.  e.g.:
+//
+//  (lambda (x) (* x x))
+//
+// would evaluate to a lambda that, when executed, squares its input.
+func mklambda(env *environment, args ...interface{}) (interface{}, error) {
+	debugPrint("mklambda")
+	if len(args) != 2 {
+		return nil, nargsInvalidError{2, len(args), "lambda"}
+	}
+
+	params, ok := args[0].(sexp)
+	if !ok {
+		return nil, fmt.Errorf(`first argument to *lambda* must be sexp, received %v`, reflect.TypeOf(args[0]))
+	}
+
+	arglabels := make([]symbol, 0, len(params))
+	for _, v := range params {
+		s, ok := v.(symbol)
+		if !ok {
+			return nil, fmt.Errorf(`lambda args must all be symbols; received invalid %v`, reflect.TypeOf(v))
+		}
+		arglabels = append(arglabels, s)
+	}
+
+	body, ok := args[1].(sexp)
+	if !ok {
+		return nil, fmt.Errorf(`second argument to *lambda* must be sexp, received %v`, reflect.TypeOf(args[1]))
+	}
+
+	return lambda{env, arglabels, body}, nil
 }

@@ -31,6 +31,7 @@ var universe = &environment{map[symbol]interface{}{
 	"quote":  special(quote),
 	"if":     special(_if),
 	"set!":   special(set),
+	"lambda": special(mklambda),
 }, nil}
 
 // parses the string lexeme into a value that can be eval'd
@@ -146,6 +147,14 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 				return b.call(env, t[1:])
 			} else {
 				return b.call(env, nil)
+			}
+		}
+
+		if l, ok := v.(lambda); ok {
+			if len(t) > 1 {
+				return l.call(env, t[1:])
+			} else {
+				return l.call(env, nil)
 			}
 		}
 
