@@ -131,6 +131,7 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 			return nil, err
 		}
 
+		// check to see if this is a special form
 		if spec, ok := v.(special); ok {
 			if len(t) > 1 {
 				return spec(env, t[1:]...)
@@ -139,33 +140,16 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 			}
 		}
 
-		fn, ok := v.(builtin)
-		if !ok {
-			return nil, fmt.Errorf("expected builtin, found %v", reflect.TypeOf(v))
-		}
-
-		if len(t) > 1 {
-			args := make([]interface{}, 0, len(t)-1)
-			for _, raw := range t[1:] {
-				v, err := eval(raw, env)
-				if err != nil {
-					return nil, err
-				}
-				args = append(args, v)
+		// exec builtin func if one exists
+		if b, ok := v.(builtin); ok {
+			if len(t) > 1 {
+				return b.call(env, t[1:])
+			} else {
+				return b.call(env, nil)
 			}
-			inner, err := fn(args...)
-			if err != nil {
-				return nil, err
-			}
-			return eval(inner, env)
 		}
 
-		inner, err := fn()
-		if err != nil {
-			return nil, err
-		}
-
-		return eval(inner, env)
+		return nil, fmt.Errorf(`expected special form or builtin procedure, received %v`, reflect.TypeOf(v))
 
 	default:
 		return v, nil

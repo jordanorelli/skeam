@@ -14,8 +14,8 @@ type accumulator struct {
 	floating bool
 }
 
-func (a *accumulator) total(vals ...interface{}) (interface{}, error) {
-	if len(vals) == 0 {
+func (a *accumulator) total(vals []interface{}) (interface{}, error) {
+	if vals == nil || len(vals) == 0 {
 		return int64(0), nil
 	}
 
