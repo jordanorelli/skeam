@@ -70,3 +70,6 @@ x
 
 (null? (quote ()))
 (null? (list))
+
+(symbol? (quote null))
+(symbol? 1)

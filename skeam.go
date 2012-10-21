@@ -21,18 +21,24 @@ func (s sexp) String() string {
 type symbol string
 
 var universe = &environment{map[symbol]interface{}{
-	"#t":     true,
-	"#f":     false,
-	"null":   nil,
-	"+":      builtin(addition),
-	"-":      builtin(subtraction),
-	"*":      builtin(multiplication),
-	"/":      builtin(division),
-	"length": builtin(length),
-	"list":   builtin(list),
-	"list?":  builtin(islist),
-	"not":    builtin(not),
-	"null?":  builtin(isnull),
+	// predefined values
+	"#t":   true,
+	"#f":   false,
+	"null": nil,
+
+	// builtin functions
+	"+":       builtin(addition),
+	"-":       builtin(subtraction),
+	"*":       builtin(multiplication),
+	"/":       builtin(division),
+	"length":  builtin(length),
+	"list":    builtin(list),
+	"list?":   builtin(islist),
+	"not":     builtin(not),
+	"null?":   builtin(isnull),
+	"symbol?": builtin(issymbol),
+
+	// special forms
 	"begin":  special(begin),
 	"define": special(define),
 	"if":     special(_if),

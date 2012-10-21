@@ -132,3 +132,12 @@ func isnull(vals []interface{}) (interface{}, error) {
 
 	return len(s) == 0, nil
 }
+
+func issymbol(vals []interface{}) (interface{}, error) {
+	if err := checkArity(1, vals, "symbol?"); err != nil {
+		return nil, err
+	}
+
+	_, ok := vals[0].(symbol)
+	return ok, nil
+}
