@@ -126,6 +126,12 @@ func lexMinus(l *lexer) (stateFn, error) {
 	case ' ', '\t', '\n', '\r':
 		l.emit(symbolToken)
 		return lexWhitespace, nil
+	case '(':
+		l.emit(symbolToken)
+		return lexOpenParen, nil
+	case ')':
+		l.emit(symbolToken)
+		return lexCloseParen, nil
 	case '.':
 		l.keep()
 		return lexFloat, nil
