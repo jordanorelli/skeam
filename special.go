@@ -71,6 +71,13 @@ func quote(_ *environment, args ...interface{}) (interface{}, error) {
 	return args[0], nil
 }
 
+func booleanize(v interface{}) bool {
+	if b, ok := v.(bool); ok {
+		return b
+	}
+	return true
+}
+
 // defines the built-in "if" contruct.  e.g.:
 //
 //  (if #t "foo" "bar")
@@ -90,10 +97,10 @@ func _if(env *environment, args ...interface{}) (interface{}, error) {
 		return nil, err
 	}
 
-	if b, ok := v.(bool); ok && !b {
-		return eval(args[2], env)
+	if booleanize(v) {
+		return eval(args[1], env)
 	}
-	return eval(args[1], env)
+	return eval(args[2], env)
 }
 
 // defines the built-in "set" construct, which is used to set the value of an

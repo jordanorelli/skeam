@@ -83,3 +83,10 @@ func division(vals []interface{}) (interface{}, error) {
 	}
 	return a.total(vals)
 }
+
+func not(vals []interface{}) (interface{}, error) {
+	if err := checkArity(1, vals, "not"); err != nil {
+		return nil, err
+	}
+	return !booleanize(vals[0]), nil
+}
