@@ -35,12 +35,19 @@ var universe = &environment{map[symbol]interface{}{
 	">=":      builtin(gte),
 	"<":       builtin(lt),
 	"<=":      builtin(lte),
+	"cons":    builtin(cons),
+	"car":     builtin(car),
+	"cdr":     builtin(cdr),
 	"length":  builtin(length),
 	"list":    builtin(list),
 	"list?":   builtin(islist),
 	"not":     builtin(not),
 	"null?":   builtin(isnull),
 	"symbol?": builtin(issymbol),
+	// "="
+	// "equal?"
+	// "eq?"
+	// "append"
 
 	// special forms
 	"begin":  special(begin),

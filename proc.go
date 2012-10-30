@@ -142,6 +142,42 @@ func issymbol(vals []interface{}) (interface{}, error) {
 	return ok, nil
 }
 
+func cons(vals []interface{}) (interface{}, error) {
+	if err := checkArity(2, vals, "cons"); err != nil {
+		return nil, err
+	}
+	s := sexp{vals[0]}
+	switch t := vals[1].(type) {
+	case sexp:
+		return append(s, t...), nil
+	default:
+		return append(s, t), nil
+	}
+	panic("not reached")
+}
+
+func car(vals []interface{}) (interface{}, error) {
+	if err := checkArity(1, vals, "car"); err != nil {
+		return nil, err
+	}
+	s, ok := vals[0].(sexp)
+	if !ok {
+		return nil, errors.New("expected list")
+	}
+	return s[0], nil
+}
+
+func cdr(vals []interface{}) (interface{}, error) {
+	if err := checkArity(1, vals, "cdr"); err != nil {
+		return nil, err
+	}
+	s, ok := vals[0].(sexp)
+	if !ok {
+		return nil, errors.New("expected list")
+	}
+	return s[1:], nil
+}
+
 type cmp_bin_i func(int64, int64) bool
 type cmp_bin_f func(float64, float64) bool
 
