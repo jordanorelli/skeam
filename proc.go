@@ -107,7 +107,7 @@ func length(vals []interface{}) (interface{}, error) {
 	return len(x), nil
 }
 
-func list(vals []interface{}) (interface{}, error) {
+func lst(vals []interface{}) (interface{}, error) {
 	return sexp(vals), nil
 }
 

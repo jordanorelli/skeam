@@ -75,7 +75,17 @@ func quote(_ *environment, args ...interface{}) (interface{}, error) {
 		return nil, err
 	}
 
-	return args[0], nil
+	switch t := args[0].(type) {
+	case list:
+		fmt.Println("got a list...")
+		t.quotelevel++
+		return t, nil
+	case sexp:
+		return list{t, 1}, nil
+	default:
+		return t, nil
+	}
+	panic("not reached")
 }
 
 // turns an arbitrary lisp value into a boolean.  Apparently the sematics of

@@ -8,6 +8,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 var DEBUG = false
@@ -15,7 +16,20 @@ var DEBUG = false
 type sexp []interface{}
 
 func (s sexp) String() string {
-	return "(" + fmt.Sprint(s...) + ")"
+	parts := make([]string, len(s))
+	for i, _ := range s {
+		parts[i] = fmt.Sprint(s[i])
+	}
+	return "(" + strings.Join(parts, " ") + ")"
+}
+
+type list struct {
+	sexp
+	quotelevel int
+}
+
+func (l list) String() string {
+	return l.sexp.String()
 }
 
 type symbol string
@@ -39,7 +53,7 @@ var universe = &environment{map[symbol]interface{}{
 	"car":     builtin(car),
 	"cdr":     builtin(cdr),
 	"length":  builtin(length),
-	"list":    builtin(list),
+	"list":    builtin(lst),
 	"list?":   builtin(islist),
 	"not":     builtin(not),
 	"null?":   builtin(isnull),
