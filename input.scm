@@ -73,3 +73,25 @@ x
 
 (symbol? (quote null))
 (symbol? 1)
+
+; ahahhahahah this is so ugly.
+(define counter
+  ((lambda ()
+    (begin
+      (define count 0)
+      (lambda ()
+        (begin
+          (set! count (+ 1 count))
+          count))))))
+
+; hmm, some kind of looping construct would be nice.
+(counter)
+(counter)
+(counter)
+(counter)
+(counter)
+(counter)
+(counter)
+(counter)
+(counter)
+(counter)
