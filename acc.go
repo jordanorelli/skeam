@@ -5,6 +5,9 @@ import (
 	"reflect"
 )
 
+// type accumulator describes an accumulator.  That is, it is a numerical
+// structure that applies a pair of functions across a list of values that are
+// expected to be numerical; i.e. of type int64 or float64.
 type accumulator struct {
 	name     string
 	floatFn  func(float64, float64) (float64, error)
@@ -14,7 +17,7 @@ type accumulator struct {
 	floating bool
 }
 
-func (a *accumulator) total(vals []interface{}) (interface{}, error) {
+func (a accumulator) total(vals []interface{}) (interface{}, error) {
 	if vals == nil || len(vals) == 0 {
 		return a.acc, nil
 	}

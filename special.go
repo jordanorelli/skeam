@@ -17,9 +17,15 @@ type arityError struct {
 	expected int
 	received int
 	name     string
+	variadic bool
 }
 
 func (n arityError) Error() string {
+	if n.variadic {
+		return fmt.Sprintf(`received %d arguments in *%v*, expected %d (or more)`,
+			n.received, n.name, n.expected)
+	}
+
 	return fmt.Sprintf(`received %d arguments in *%v*, expected %d`,
 		n.received, n.name, n.expected)
 }
@@ -31,10 +37,10 @@ func checkArity(arity int, args []interface{}, name string) error {
 		if arity == 0 {
 			return nil
 		}
-		return arityError{arity, 0, name}
+		return arityError{arity, 0, name, false}
 	}
 	if len(args) != arity {
-		return arityError{arity, len(args), name}
+		return arityError{arity, len(args), name, false}
 	}
 	return nil
 }
