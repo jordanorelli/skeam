@@ -9,7 +9,37 @@ import (
 // type special is a callable outside of the normal execution workflow.  That
 // is, a special receives its arguments unevaluated, unlike lambdas or builtin,
 // both of whose arguments are evaluated upon invocation.
-type special func(*environment, ...interface{}) (interface{}, error)
+// type special func(*environment, ...interface{}) (interface{}, error)
+type special struct {
+	name     string
+	arity    int
+	variadic bool
+	fn       func(*environment, []interface{}) (interface{}, error)
+}
+
+func (s special) checkArity(n int) error {
+	if n == s.arity {
+		return nil
+	}
+
+	if s.variadic && n > s.arity {
+		return nil
+	}
+
+	return arityError{
+		expected: s.arity,
+		received: n,
+		name:     s.name,
+		variadic: s.variadic,
+	}
+}
+
+func (s special) call(env *environment, rawArgs []interface{}) (interface{}, error) {
+	if err := s.checkArity(len(rawArgs)); err != nil {
+		return nil, err
+	}
+	return s.fn(env, rawArgs)
+}
 
 // type arityError is used to store information related to arity errors.  That
 // is, the invocation of a callable with the wrong number of arguments.
@@ -50,23 +80,23 @@ func checkArity(arity int, args []interface{}, name string) error {
 //  (define x 5)
 //
 // would create the symbol "x" and set its value to 5.
-func define(env *environment, args ...interface{}) (interface{}, error) {
-	if err := checkArity(2, args, "define"); err != nil {
-		return nil, err
-	}
+var define = special{
+	name:  "define",
+	arity: 2,
+	fn: func(env *environment, args []interface{}) (interface{}, error) {
+		s, ok := args[0].(symbol)
+		if !ok {
+			return nil, fmt.Errorf(`first argument to *define* must be symbol, received %v`, reflect.TypeOf(args[0]))
+		}
 
-	s, ok := args[0].(symbol)
-	if !ok {
-		return nil, fmt.Errorf(`first argument to *define* must be symbol, received %v`, reflect.TypeOf(args[0]))
-	}
+		v, err := eval(args[1], env)
+		if err != nil {
+			return nil, err
+		}
+		env.set(s, v)
 
-	v, err := eval(args[1], env)
-	if err != nil {
-		return nil, err
-	}
-	env.set(s, v)
-
-	return nil, nil
+		return nil, nil
+	},
 }
 
 // defines the built-in "quote" construct.  e.g.:
@@ -76,19 +106,19 @@ func define(env *environment, args ...interface{}) (interface{}, error) {
 // would evaluate to the list (1 2 3).  That is, quote is a function of arity 1
 // that is effectively a no-op; the input value is not evaluated, which
 // prevents evaluation of the first element of the list, in this case 1.
-func quote(_ *environment, args ...interface{}) (interface{}, error) {
-	if err := checkArity(1, args, "quote"); err != nil {
-		return nil, err
-	}
-
-	switch t := args[0].(type) {
-	case *sexp:
-		t.quotelvl++
-		return t, nil
-	default:
-		return &sexp{items: []interface{}{t}, quotelvl: 1}, nil
-	}
-	panic("not reached")
+var quote = special{
+	name:  "quote",
+	arity: 1,
+	fn: func(_ *environment, args []interface{}) (interface{}, error) {
+		switch t := args[0].(type) {
+		case *sexp:
+			t.quotelvl++
+			return t, nil
+		default:
+			return &sexp{items: []interface{}{t}, quotelvl: 1}, nil
+		}
+		panic("not reached")
+	},
 }
 
 // turns an arbitrary lisp value into a boolean.  Apparently the sematics of
@@ -110,20 +140,20 @@ func booleanize(v interface{}) bool {
 //  (if #f "foo" "bar")
 //
 // would evaluate to "bar"
-func _if(env *environment, args ...interface{}) (interface{}, error) {
-	if err := checkArity(3, args, "if"); err != nil {
-		return nil, err
-	}
+var _if = special{
+	name:  "if",
+	arity: 3,
+	fn: func(env *environment, args []interface{}) (interface{}, error) {
+		v, err := eval(args[0], env)
+		if err != nil {
+			return nil, err
+		}
 
-	v, err := eval(args[0], env)
-	if err != nil {
-		return nil, err
-	}
-
-	if booleanize(v) {
-		return eval(args[1], env)
-	}
-	return eval(args[2], env)
+		if booleanize(v) {
+			return eval(args[1], env)
+		}
+		return eval(args[2], env)
+	},
 }
 
 // defines the built-in "set!" construct, which is used to set the value of an
@@ -133,27 +163,27 @@ func _if(env *environment, args ...interface{}) (interface{}, error) {
 //
 // would set the symbol x to the value 5, if and only if the symbol x was
 // previously defined.
-func set(env *environment, args ...interface{}) (interface{}, error) {
-	if err := checkArity(2, args, "set!"); err != nil {
-		return nil, err
-	}
+var set = special{
+	name:  "set!",
+	arity: 2,
+	fn: func(env *environment, args []interface{}) (interface{}, error) {
+		s, ok := args[0].(symbol)
+		if !ok {
+			return nil, fmt.Errorf(`first argument to *set!* must be symbol, received %v`, reflect.TypeOf(args[0]))
+		}
 
-	s, ok := args[0].(symbol)
-	if !ok {
-		return nil, fmt.Errorf(`first argument to *set!* must be symbol, received %v`, reflect.TypeOf(args[0]))
-	}
+		if !env.defined(s) {
+			return nil, fmt.Errorf(`cannot *set!* undefined symbol %v`, s)
+		}
 
-	if !env.defined(s) {
-		return nil, fmt.Errorf(`cannot *set!* undefined symbol %v`, s)
-	}
+		v, err := eval(args[1], env)
+		if err != nil {
+			return nil, err
+		}
+		env.set(s, v)
 
-	v, err := eval(args[1], env)
-	if err != nil {
-		return nil, err
-	}
-	env.set(s, v)
-
-	return nil, nil
+		return nil, nil
+	},
 }
 
 type lambda struct {
@@ -190,32 +220,33 @@ func (l lambda) call(env *environment, rawArgs []interface{}) (interface{}, erro
 //  (lambda (x) (* x x))
 //
 // would evaluate to a lambda that, when executed, squares its input.
-func mklambda(env *environment, args ...interface{}) (interface{}, error) {
-	debugPrint("mklambda")
-	if err := checkArity(2, args, "lambda"); err != nil {
-		return nil, err
-	}
+var mklambda = special{
+	name:  "lambda",
+	arity: 2,
+	fn: func(env *environment, args []interface{}) (interface{}, error) {
+		debugPrint("mklambda")
 
-	params, ok := args[0].(*sexp)
-	if !ok {
-		return nil, fmt.Errorf(`first argument to *lambda* must be sexp, received %v`, reflect.TypeOf(args[0]))
-	}
-
-	arglabels := make([]symbol, 0, len(params.items))
-	for _, v := range params.items {
-		s, ok := v.(symbol)
+		params, ok := args[0].(*sexp)
 		if !ok {
-			return nil, fmt.Errorf(`lambda args must all be symbols; received invalid %v`, reflect.TypeOf(v))
+			return nil, fmt.Errorf(`first argument to *lambda* must be sexp, received %v`, reflect.TypeOf(args[0]))
 		}
-		arglabels = append(arglabels, s)
-	}
 
-	body, ok := args[1].(*sexp)
-	if !ok {
-		return nil, fmt.Errorf(`second argument to *lambda* must be sexp, received %v`, reflect.TypeOf(args[1]))
-	}
+		arglabels := make([]symbol, 0, len(params.items))
+		for _, v := range params.items {
+			s, ok := v.(symbol)
+			if !ok {
+				return nil, fmt.Errorf(`lambda args must all be symbols; received invalid %v`, reflect.TypeOf(v))
+			}
+			arglabels = append(arglabels, s)
+		}
 
-	return lambda{env, arglabels, body}, nil
+		body, ok := args[1].(*sexp)
+		if !ok {
+			return nil, fmt.Errorf(`second argument to *lambda* must be sexp, received %v`, reflect.TypeOf(args[1]))
+		}
+
+		return lambda{env, arglabels, body}, nil
+	},
 }
 
 // defines the built-in "begin" construct.  A "begin" statement evaluates each
@@ -225,17 +256,19 @@ func mklambda(env *environment, args ...interface{}) (interface{}, error) {
 //  (begin (+ 1 1) (* 2 2) (+ 3 3))
 //
 // would evaluate to 6.
-func begin(env *environment, args ...interface{}) (interface{}, error) {
-	debugPrint("begin")
-
-	var err error
-	var v interface{}
-	for _, arg := range args {
-		v, err = eval(arg, env)
-		if err != nil {
-			return nil, err
+var begin = special{
+	name:     "begin",
+	variadic: true,
+	fn: func(env *environment, args []interface{}) (interface{}, error) {
+		debugPrint("begin")
+		var err error
+		var v interface{}
+		for _, arg := range args {
+			v, err = eval(arg, env)
+			if err != nil {
+				return nil, err
+			}
 		}
-	}
-
-	return v, nil
+		return v, nil
+	},
 }

@@ -18,6 +18,10 @@ type sexp struct {
 	quotelvl int
 }
 
+type callable interface {
+	call(*environment, []interface{}) (interface{}, error)
+}
+
 func newSexp() *sexp {
 	return &sexp{
 		items:    make([]interface{}, 0, 8),
@@ -73,12 +77,12 @@ var universe = &environment{map[symbol]interface{}{
 	// "append"
 
 	// special forms
-	"begin":  special(begin),
-	"define": special(define),
-	"if":     special(_if),
-	"lambda": special(mklambda),
-	"quote":  special(quote),
-	"set!":   special(set),
+	symbol(begin.name):    begin,
+	symbol(define.name):   define,
+	symbol(_if.name):      _if,
+	symbol(mklambda.name): mklambda,
+	symbol(quote.name):    quote,
+	symbol(set.name):      set,
 }, nil}
 
 // parses the string lexeme into a value that can be eval'd
@@ -181,35 +185,14 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 			return nil, err
 		}
 
-		// check to see if this is a special form
-		if spec, ok := v.(special); ok {
-			debugPrint("special!")
-			if len(t.items) > 1 {
-				return spec(env, t.items[1:]...)
-			} else {
-				return spec(env)
-			}
+		c, ok := v.(callable)
+		if !ok {
+			return nil, fmt.Errorf(`expected special form or builtin procedure, received %v`, reflect.TypeOf(v))
 		}
-
-		// exec builtin func if one exists
-		if b, ok := v.(builtin); ok {
-			if len(t.items) > 1 {
-				return b.call(env, t.items[1:])
-			} else {
-				return b.call(env, nil)
-			}
+		if len(t.items) > 1 {
+			return c.call(env, t.items[1:])
 		}
-
-		// exec lambda if possible
-		if l, ok := v.(lambda); ok {
-			if len(t.items) > 1 {
-				return l.call(env, t.items[1:])
-			} else {
-				return l.call(env, nil)
-			}
-		}
-
-		return nil, fmt.Errorf(`expected special form or builtin procedure, received %v`, reflect.TypeOf(v))
+		return c.call(env, nil)
 
 	default:
 		debugPrint("default eval")
