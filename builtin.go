@@ -144,13 +144,11 @@ var length = builtin{
 	name:  "length",
 	arity: 1,
 	fn: func(vals []interface{}) (interface{}, error) {
-		switch t := vals[0].(type) {
-		case sexp:
-			return len(t), nil
-		case list:
-			return len(t.sexp), nil
+		s, ok := vals[0].(*sexp)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be sexp, received %v", reflect.TypeOf(vals[0]))
 		}
-		return nil, fmt.Errorf("first argument must be sexp, received %v", reflect.TypeOf(vals[0]))
+		return len(s.items), nil
 	},
 }
 
@@ -158,7 +156,7 @@ var lst = builtin{
 	name:     "list",
 	variadic: true,
 	fn: func(vals []interface{}) (interface{}, error) {
-		return list{sexp(vals), 1}, nil
+		return &sexp{items: vals, quotelvl: 1}, nil
 	},
 }
 
@@ -166,11 +164,8 @@ var islist = builtin{
 	name:  "list?",
 	arity: 1,
 	fn: func(vals []interface{}) (interface{}, error) {
-		switch vals[0].(type) {
-		case list, sexp:
-			return true, nil
-		}
-		return false, nil
+		_, ok := vals[0].(*sexp)
+		return ok, nil
 	},
 }
 
@@ -178,11 +173,11 @@ var isnull = builtin{
 	name:  "null?",
 	arity: 1,
 	fn: func(vals []interface{}) (interface{}, error) {
-		s, ok := vals[0].(sexp)
+		s, ok := vals[0].(*sexp)
 		if !ok {
 			return false, nil
 		}
-		return len(s) == 0, nil
+		return len(s.items) == 0, nil
 	},
 }
 
@@ -199,14 +194,14 @@ var cons = builtin{
 	name:  "cons",
 	arity: 2,
 	fn: func(vals []interface{}) (interface{}, error) {
-		s := sexp{vals[0]}
+		s := &sexp{items: vals[0:1]}
 		switch t := vals[1].(type) {
-		case sexp:
-			return append(s, t...), nil
+		case *sexp:
+			s.items = append(s.items, t.items...)
 		default:
-			return append(s, t), nil
+			s.items = append(s.items, t)
 		}
-		panic("not reached")
+		return s, nil
 	},
 }
 
@@ -214,11 +209,11 @@ var car = builtin{
 	name:  "car",
 	arity: 1,
 	fn: func(vals []interface{}) (interface{}, error) {
-		s, ok := vals[0].(sexp)
+		s, ok := vals[0].(*sexp)
 		if !ok {
 			return nil, errors.New("expected list")
 		}
-		return s[0], nil
+		return s.items[0], nil
 	},
 }
 
@@ -226,10 +221,10 @@ var cdr = builtin{
 	name:  "cdr",
 	arity: 1,
 	fn: func(vals []interface{}) (interface{}, error) {
-		s, ok := vals[0].(sexp)
+		s, ok := vals[0].(*sexp)
 		if !ok {
 			return nil, errors.New("expected list")
 		}
-		return s[1:], nil
+		return s.items[1:], nil
 	},
 }

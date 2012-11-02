@@ -82,14 +82,11 @@ func quote(_ *environment, args ...interface{}) (interface{}, error) {
 	}
 
 	switch t := args[0].(type) {
-	case list:
-		fmt.Println("got a list...")
-		t.quotelevel++
+	case *sexp:
+		t.quotelvl++
 		return t, nil
-	case sexp:
-		return list{t, 1}, nil
 	default:
-		return t, nil
+		return &sexp{items: []interface{}{t}, quotelvl: 1}, nil
 	}
 	panic("not reached")
 }
@@ -162,7 +159,7 @@ func set(env *environment, args ...interface{}) (interface{}, error) {
 type lambda struct {
 	env       *environment
 	arglabels []symbol
-	body      sexp
+	body      *sexp
 }
 
 func (l lambda) call(env *environment, rawArgs []interface{}) (interface{}, error) {
@@ -199,13 +196,13 @@ func mklambda(env *environment, args ...interface{}) (interface{}, error) {
 		return nil, err
 	}
 
-	params, ok := args[0].(sexp)
+	params, ok := args[0].(*sexp)
 	if !ok {
 		return nil, fmt.Errorf(`first argument to *lambda* must be sexp, received %v`, reflect.TypeOf(args[0]))
 	}
 
-	arglabels := make([]symbol, 0, len(params))
-	for _, v := range params {
+	arglabels := make([]symbol, 0, len(params.items))
+	for _, v := range params.items {
 		s, ok := v.(symbol)
 		if !ok {
 			return nil, fmt.Errorf(`lambda args must all be symbols; received invalid %v`, reflect.TypeOf(v))
@@ -213,7 +210,7 @@ func mklambda(env *environment, args ...interface{}) (interface{}, error) {
 		arglabels = append(arglabels, s)
 	}
 
-	body, ok := args[1].(sexp)
+	body, ok := args[1].(*sexp)
 	if !ok {
 		return nil, fmt.Errorf(`second argument to *lambda* must be sexp, received %v`, reflect.TypeOf(args[1]))
 	}

@@ -13,23 +13,32 @@ import (
 
 var DEBUG = false
 
-type sexp []interface{}
+type sexp struct {
+	items    []interface{}
+	quotelvl int
+}
+
+func newSexp() *sexp {
+	return &sexp{
+		items:    make([]interface{}, 0, 8),
+		quotelvl: 0,
+	}
+}
 
 func (s sexp) String() string {
-	parts := make([]string, len(s))
-	for i, _ := range s {
-		parts[i] = fmt.Sprint(s[i])
+	parts := make([]string, len(s.items))
+	for i, _ := range s.items {
+		parts[i] = fmt.Sprint(s.items[i])
 	}
 	return "(" + strings.Join(parts, " ") + ")"
 }
 
-type list struct {
-	sexp
-	quotelevel int
+func (s *sexp) append(item interface{}) {
+	s.items = append(s.items, item)
 }
 
-func (l list) String() string {
-	return l.sexp.String()
+func (s sexp) len() int {
+	return len(s.items)
 }
 
 type symbol string
@@ -106,17 +115,17 @@ func (s *sexp) readIn(c chan token) error {
 		case closeParenToken:
 			return nil
 		case openParenToken:
-			child := make(sexp, 0)
+			child := newSexp()
 			if err := child.readIn(c); err != nil {
 				return err
 			}
-			*s = append(*s, child)
+			s.append(child)
 		default:
 			v, err := atom(t)
 			if err != nil {
 				return err
 			}
-			*s = append(*s, v)
+			s.append(v)
 		}
 	}
 	return errors.New("unexpected EOF in sexp.readIn")
@@ -129,7 +138,7 @@ func parse(c chan token) (interface{}, error) {
 		case closeParenToken:
 			return nil, errors.New("unexpected EOF in read")
 		case openParenToken:
-			s := make(sexp, 0)
+			s := newSexp()
 			if err := s.readIn(c); err != nil {
 				return nil, err
 			}
@@ -143,7 +152,7 @@ func parse(c chan token) (interface{}, error) {
 
 func eval(v interface{}, env *environment) (interface{}, error) {
 	if v == nil {
-		return sexp{}, nil
+		return &sexp{}, nil
 	}
 
 	switch t := v.(type) {
@@ -156,22 +165,27 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 		}
 		return eval(s, env)
 
-	case sexp:
+	case *sexp:
 		debugPrint("eval sexp")
-		if len(t) == 0 {
+		if t.len() == 0 {
 			return nil, errors.New("illegal evaluation of empty sexp ()")
 		}
 
+		if t.quotelvl > 0 {
+			return t, nil
+		}
+
 		// eval the first item
-		v, err := eval(t[0], env)
+		v, err := eval(t.items[0], env)
 		if err != nil {
 			return nil, err
 		}
 
 		// check to see if this is a special form
 		if spec, ok := v.(special); ok {
-			if len(t) > 1 {
-				return spec(env, t[1:]...)
+			debugPrint("special!")
+			if len(t.items) > 1 {
+				return spec(env, t.items[1:]...)
 			} else {
 				return spec(env)
 			}
@@ -179,8 +193,8 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 
 		// exec builtin func if one exists
 		if b, ok := v.(builtin); ok {
-			if len(t) > 1 {
-				return b.call(env, t[1:])
+			if len(t.items) > 1 {
+				return b.call(env, t.items[1:])
 			} else {
 				return b.call(env, nil)
 			}
@@ -188,8 +202,8 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 
 		// exec lambda if possible
 		if l, ok := v.(lambda); ok {
-			if len(t) > 1 {
-				return l.call(env, t[1:])
+			if len(t.items) > 1 {
+				return l.call(env, t.items[1:])
 			} else {
 				return l.call(env, nil)
 			}
@@ -198,6 +212,7 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 		return nil, fmt.Errorf(`expected special form or builtin procedure, received %v`, reflect.TypeOf(v))
 
 	default:
+		debugPrint("default eval")
 		return v, nil
 	}
 
