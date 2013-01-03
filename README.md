@@ -21,7 +21,7 @@ language.  If you don't have it, you can download it
 [here](http://golang.org/doc/install).
 
 Skeam is go-gettable, so installation only requires the following command:  `go
-install github.com/jordanorelli/skeam`.  Make sure your `$GOBIN` is included in
+get github.com/jordanorelli/skeam`.  Make sure your `$GOBIN` is included in
 your environment's `$PATH`.  E.g., on Mac OS X, this generally means adding
 `export PATH=$PATH:/usr/local/go/bin` to your `.bashrc`.
 
