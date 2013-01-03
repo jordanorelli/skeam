@@ -95,3 +95,28 @@ x
 (counter)
 (counter)
 (counter)
+
+; ------------------------------------------------------------------------------
+; norving examples
+; ------------------------------------------------------------------------------
+
+(define area (lambda (r) (* 3.141592653 (* r r))))
+(area 3)
+
+; <= isn't defined yet
+; (define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))
+; (fact 10)
+
+; this one is an overflow error :(
+; (fact 100)
+
+; (area (fact 10))
+
+; (define first car)
+; (define rest cdr)
+; (define count
+;   (lambda (item L)
+;     (if L (+ (equal? item (first L)) (count item (rest L)))
+;       0)))
+; (count 0 (list 0 1 2 3 0 0))
+; (count (quote the) (quote (the more the merrier the bigger the better)))
