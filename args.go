@@ -10,13 +10,9 @@ import (
 
 var tcpAddr = flag.String("tcp", "", "foo")
 
-func args() {
-	flag.Parse()
-	if *tcpAddr != "" {
-		runTCPServer()
-		return
-	}
-	filename := flag.Args()[1]
+func runfile() {
+	filename := flag.Args()[0]
+	fmt.Println(filename)
 	f, err := os.Open(filename)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "unable to read file ", filename)

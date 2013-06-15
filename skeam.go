@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -140,22 +141,23 @@ func (s *sexp) readIn(c chan token) error {
 }
 
 // parses one value that can be evaled from the channel
-func parse(c chan token) (interface{}, error) {
+func parse(c chan token) (interface{}, bool, error) {
 	for t := range c {
 		switch t.t {
 		case closeParenToken:
-			return nil, errors.New("unexpected EOF in read")
+			return nil, false, errors.New("unexpected EOF in read")
 		case openParenToken:
 			s := newSexp()
 			if err := s.readIn(c); err != nil {
-				return nil, err
+				return nil, true, err
 			}
-			return s, nil
+			return s, false, nil
 		default:
-			return atom(t)
+			v, err := atom(t)
+			return v, false, err
 		}
 	}
-	return nil, io.EOF
+	return nil, false, io.EOF
 }
 
 func eval(v interface{}, env *environment) (interface{}, error) {
@@ -208,7 +210,7 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 
 func evalall(c chan token, out chan interface{}, e chan error, env *environment) {
 	for {
-		v, err := parse(c)
+		v, _, err := parse(c)
 		switch err {
 		case io.EOF:
 			return
@@ -237,37 +239,23 @@ func defaultInterpreter(out chan interface{}, errors chan error) {
 }
 
 func main() {
+	flag.Parse()
 	if DEBUG {
 		fmt.Println(universe)
 	}
-	if len(os.Args) > 1 {
-		args()
+	if *tcpAddr != "" {
+		runTCPServer()
+		return
+	}
+	if len(flag.Args()) > 0 {
+		runfile()
 		return
 	}
 
 	out, errors := make(chan interface{}), make(chan error)
 	go defaultInterpreter(out, errors)
 
-	r := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Print("> ")
-		line, prefix, err := r.ReadLine()
-		if prefix {
-			fmt.Println("(prefix)")
-		}
-		switch err {
-		case nil:
-			break
-		case io.EOF:
-			fmt.Print("\n")
-			return
-		default:
-			fmt.Println("error: ", err)
-			continue
-		}
-
-		c := make(chan token, 32)
-		go lexs(string(line)+"\n", c)
-		evalall(c, out, errors, universe)
-	}
+	c := make(chan token, 32)
+	go lex(bufio.NewReader(os.Stdin), c)
+	evalall(c, out, errors, universe)
 }

@@ -11,19 +11,15 @@ import (
 var manager = cm.New()
 
 func tcpInterpreter(conn net.Conn, userinput chan string, out chan interface{}, errors chan error) {
-	prompt := func() {
-		io.WriteString(conn, "> ")
-	}
-	prompt()
 	for {
 		select {
 		case v := <-out:
-			fmt.Fprintln(conn, v)
-			prompt()
+			fmt.Fprintln(manager, v)
 		case err := <-errors:
 			fmt.Fprintf(conn, "error: %v", err)
 		case line := <-userinput:
 			tokens := make(chan token, 32)
+			// this is probably dumb
 			go lexs(line+"\n", tokens)
 			go evalall(tokens, out, errors, universe)
 		}
