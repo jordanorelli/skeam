@@ -223,20 +223,6 @@ func evalall(c chan token, env *environment) {
 	}
 }
 
-func args() {
-	filename := os.Args[1]
-	f, err := os.Open(filename)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "unable to read file ", filename)
-		os.Exit(1)
-	}
-	defer f.Close()
-
-	c := make(chan token, 32)
-	go lex(bufio.NewReader(f), c)
-	evalall(c, universe)
-}
-
 func main() {
 	if DEBUG {
 		fmt.Println(universe)
