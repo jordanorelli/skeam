@@ -272,3 +272,12 @@ var begin = special{
 		return v, nil
 	},
 }
+
+var names = special{
+	name:     "names",
+	arity:    0,
+	variadic: false,
+	fn: func(env *environment, args []interface{}) (interface{}, error) {
+		return env.keys(), nil
+	},
+}
