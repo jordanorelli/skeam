@@ -5,14 +5,14 @@ import (
 )
 
 type Manager struct {
-	active     []net.Conn
+	active     map[net.Conn]bool
 	connect    chan net.Conn
 	disconnect chan net.Conn
 }
 
 func New() *Manager {
 	m := &Manager{
-		active:     make([]net.Conn, 0, 10),
+		active:     make(map[net.Conn]bool, 10),
 		connect:    make(chan net.Conn),
 		disconnect: make(chan net.Conn),
 	}
@@ -24,9 +24,9 @@ func (m *Manager) run() {
 	for {
 		select {
 		case conn := <-m.connect:
-			m.active = append(m.active, conn)
+			m.active[conn] = true
 		case conn := <-m.disconnect:
-			m.removeConnection(conn)
+			delete(m.active, conn)
 		}
 	}
 }
@@ -37,13 +37,4 @@ func (m *Manager) Add(conn net.Conn) {
 
 func (m *Manager) Remove(conn net.Conn) {
 	m.disconnect <- conn
-}
-
-func (m *Manager) removeConnection(conn net.Conn) {
-	for i, other := range m.active {
-		if conn.RemoteAddr() == other.RemoteAddr() {
-			m.active = append(m.active[:i], m.active[i+1:]...)
-			return
-		}
-	}
 }
