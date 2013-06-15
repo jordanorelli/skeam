@@ -60,11 +60,11 @@ func startConnection(conn net.Conn, c, d chan net.Conn) {
 			break
 		case io.EOF:
 			disconnect()
-            return
+			return
 		default:
 			printErrorMsg(err.Error())
 			disconnect()
-            return
+			return
 		}
 
 		tokens := make(chan token, 32)
