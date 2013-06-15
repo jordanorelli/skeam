@@ -25,9 +25,12 @@ func args() {
 	}
 	defer f.Close()
 
+	out, errors := make(chan interface{}), make(chan error)
+	go defaultInterpreter(out, errors)
+
 	c := make(chan token, 32)
 	go lex(bufio.NewReader(f), c)
-	evalall(c, universe)
+	evalall(c, out, errors, universe)
 }
 
 func printErrorMsg(message string) {
@@ -39,12 +42,27 @@ func die(message string) {
 	os.Exit(2)
 }
 
+func tcpInterpreter(conn net.Conn, out chan interface{}, errors chan error) {
+	for {
+		select {
+		case v := <-out:
+			fmt.Fprintln(conn, v)
+		case err := <-errors:
+			fmt.Fprintf(conn, "error: %v", err)
+		}
+	}
+}
+
 func startConnection(conn net.Conn, c, d chan net.Conn) {
 	c <- conn
 	defer func() { d <- conn }()
 	disconnect := func() {
 		fmt.Println("disconnected")
 	}
+
+	out, errors := make(chan interface{}), make(chan error)
+	go tcpInterpreter(conn, out, errors)
+
 	r := bufio.NewReader(conn)
 	for {
 		if _, err := io.WriteString(conn, "> "); err != nil {
@@ -69,16 +87,28 @@ func startConnection(conn net.Conn, c, d chan net.Conn) {
 
 		tokens := make(chan token, 32)
 		go lexs(string(line)+"\n", tokens)
-		evalall(tokens, universe)
+		evalall(tokens, out, errors, universe)
+	}
+}
+
+var activeConnections = make([]net.Conn, 0, 10)
+
+func removeConnection(conn net.Conn) {
+	for i, other := range activeConnections {
+		if conn.RemoteAddr() == other.RemoteAddr() {
+			activeConnections = append(activeConnections[:i], activeConnections[i+1:]...)
+			return
+		}
 	}
 }
 
 func manageConnections(connect, disconnect chan net.Conn) {
 	for {
 		select {
-		case <-connect:
-
-		case <-disconnect:
+		case conn := <-connect:
+			activeConnections = append(activeConnections, conn)
+		case conn := <-disconnect:
+			removeConnection(conn)
 		}
 	}
 }

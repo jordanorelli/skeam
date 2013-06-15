@@ -202,7 +202,7 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 	panic("not reached")
 }
 
-func evalall(c chan token, env *environment) {
+func evalall(c chan token, out chan interface{}, e chan error, env *environment) {
 	for {
 		v, err := parse(c)
 		switch err {
@@ -210,15 +210,24 @@ func evalall(c chan token, env *environment) {
 			return
 		case nil:
 			if v, err := eval(v, env); err != nil {
-				fmt.Println("error:", err)
+				e <- err
 				return
 			} else {
-				if v != nil {
-					fmt.Println(v)
-				}
+				out <- v
 			}
 		default:
-			fmt.Printf("error in eval: %v\n", err)
+			e <- err
+		}
+	}
+}
+
+func defaultInterpreter(out chan interface{}, errors chan error) {
+	for {
+		select {
+		case v := <-out:
+			fmt.Println(v)
+		case err := <-errors:
+			fmt.Printf("error: %v", err)
 		}
 	}
 }
@@ -231,6 +240,9 @@ func main() {
 		args()
 		return
 	}
+
+	out, errors := make(chan interface{}), make(chan error)
+	go defaultInterpreter(out, errors)
 
 	r := bufio.NewReader(os.Stdin)
 	for {
@@ -252,6 +264,6 @@ func main() {
 
 		c := make(chan token, 32)
 		go lexs(string(line)+"\n", c)
-		evalall(c, universe)
+		evalall(c, out, errors, universe)
 	}
 }
