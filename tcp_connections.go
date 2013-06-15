@@ -1,11 +1,14 @@
 package main
 
 import (
+	"./cm"
 	"bufio"
 	"fmt"
 	"io"
 	"net"
 )
+
+var manager = cm.New()
 
 func tcpInterpreter(conn net.Conn, userinput chan string, out chan interface{}, errors chan error) {
 	prompt := func() {
@@ -42,7 +45,7 @@ func runTCPServer() {
 	}
 }
 
-func startConnection(conn net.Conn, m *connectionManager) {
+func startConnection(conn net.Conn, m *cm.Manager) {
 	m.Add(conn)
 	defer m.Remove(conn)
 
