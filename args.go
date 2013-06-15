@@ -43,10 +43,15 @@ func die(message string) {
 }
 
 func tcpInterpreter(conn net.Conn, out chan interface{}, errors chan error) {
+	prompt := func() {
+		io.WriteString(conn, "> ")
+	}
+	prompt()
 	for {
 		select {
 		case v := <-out:
 			fmt.Fprintln(conn, v)
+			prompt()
 		case err := <-errors:
 			fmt.Fprintf(conn, "error: %v", err)
 		}
@@ -55,20 +60,16 @@ func tcpInterpreter(conn net.Conn, out chan interface{}, errors chan error) {
 
 func startConnection(conn net.Conn, c, d chan net.Conn) {
 	c <- conn
-	defer func() { d <- conn }()
-	disconnect := func() {
+	defer func() {
+		d <- conn
 		fmt.Println("disconnected")
-	}
+	}()
 
 	out, errors := make(chan interface{}), make(chan error)
 	go tcpInterpreter(conn, out, errors)
 
 	r := bufio.NewReader(conn)
 	for {
-		if _, err := io.WriteString(conn, "> "); err != nil {
-			disconnect()
-			return
-		}
 		line, prefix, err := r.ReadLine()
 		if prefix {
 			fmt.Println("(prefix)")
@@ -77,11 +78,9 @@ func startConnection(conn net.Conn, c, d chan net.Conn) {
 		case nil:
 			break
 		case io.EOF:
-			disconnect()
 			return
 		default:
 			printErrorMsg(err.Error())
-			disconnect()
 			return
 		}
 
