@@ -46,9 +46,9 @@ func (e environment) keys() []string {
 	for key, _ := range e.items {
 		keys = append(keys, string(key))
 	}
-    if e.outer != nil {
-        keys = append(keys, e.outer.keys()...)
-    }
+	if e.outer != nil {
+		keys = append(keys, e.outer.keys()...)
+	}
 	sort.Strings(keys)
 	return keys
 }
