@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 )
 
 type UnknownSymbolError struct{ symbol }
@@ -38,6 +39,15 @@ func (e environment) get(key symbol) (interface{}, error) {
 
 func (e environment) set(key symbol, val interface{}) {
 	e.items[key] = val
+}
+
+func (e environment) keys() []string {
+	keys := make([]string, 0, len(e.items))
+	for key, _ := range e.items {
+		keys = append(keys, string(key))
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func (e environment) defined(key symbol) bool {

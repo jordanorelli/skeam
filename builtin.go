@@ -228,3 +228,11 @@ var cdr = builtin{
 		return s.items[1:], nil
 	},
 }
+
+var names = builtin{
+	name:  "names",
+	arity: 0,
+	fn: func(vals []interface{}) (interface{}, error) {
+		return universe.keys(), nil
+	},
+}

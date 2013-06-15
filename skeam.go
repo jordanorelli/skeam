@@ -85,6 +85,10 @@ var universe = &environment{map[symbol]interface{}{
 	symbol(set.name):      set,
 }, nil}
 
+func init() {
+	universe.set(symbol(names.name), names)
+}
+
 // parses the string lexeme into a value that can be eval'd
 func atom(t token) (interface{}, error) {
 	switch t.t {
