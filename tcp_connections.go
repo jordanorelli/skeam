@@ -1,10 +1,10 @@
 package main
 
 import (
-	"./cm"
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/jordanorelli/skeam/cm"
 	"io"
 	"net"
 	"strings"
