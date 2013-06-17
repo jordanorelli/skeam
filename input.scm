@@ -104,13 +104,13 @@ x
 (area 3)
 
 ; <= isn't defined yet
-; (define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))
-; (fact 10)
+(define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))
+(fact 10)
 
 ; this one is an overflow error :(
 ; (fact 100)
 
-; (area (fact 10))
+(area (fact 10))
 
 ; (define first car)
 ; (define rest cdr)
