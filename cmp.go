@@ -99,3 +99,13 @@ var lte = builtin{
 		return cmp_left(vals, fni, fnf)
 	},
 }
+
+var equals = builtin{
+	name:     "=",
+	variadic: true,
+	fn: func(vals []interface{}) (interface{}, error) {
+		fni := func(x, y int64) bool { return x == y }
+		fnf := func(x, y float64) bool { return x == y }
+		return cmp_left(vals, fni, fnf)
+	},
+}

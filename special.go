@@ -141,9 +141,18 @@ func booleanize(v interface{}) bool {
 //
 // would evaluate to "bar"
 var _if = special{
-	name:  "if",
-	arity: 3,
+	name:     "if",
+	arity:    2,
+	variadic: true,
 	fn: func(env *environment, args []interface{}) (interface{}, error) {
+		if len(args) > 3 {
+			return nil, arityError{
+				expected: 3,
+				received: len(args),
+				name:     "ifpooop",
+				variadic: false,
+			}
+		}
 		v, err := eval(args[0], env)
 		if err != nil {
 			return nil, err
@@ -152,7 +161,10 @@ var _if = special{
 		if booleanize(v) {
 			return eval(args[1], env)
 		}
-		return eval(args[2], env)
+		if len(args) == 3 {
+			return eval(args[2], env)
+		}
+		return nil, nil
 	},
 }
 
@@ -279,5 +291,41 @@ var names = special{
 	variadic: false,
 	fn: func(env *environment, args []interface{}) (interface{}, error) {
 		return env.keys(), nil
+	},
+}
+
+var and = special{
+	name:     "and",
+	arity:    1,
+	variadic: true,
+	fn: func(env *environment, args []interface{}) (interface{}, error) {
+		for _, v := range args {
+			t, err := eval(v, env)
+			if err != nil {
+				return false, err
+			}
+			if !booleanize(t) {
+				return false, nil
+			}
+		}
+		return true, nil
+	},
+}
+
+var or = special{
+	name:     "or",
+	arity:    1,
+	variadic: true,
+	fn: func(env *environment, args []interface{}) (interface{}, error) {
+		for _, v := range args {
+			t, err := eval(v, env)
+			if err != nil {
+				return false, err
+			}
+			if booleanize(t) {
+				return true, nil
+			}
+		}
+		return false, nil
 	},
 }
