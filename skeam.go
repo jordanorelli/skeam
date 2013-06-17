@@ -137,27 +137,27 @@ func (s *sexp) readIn(c chan token) error {
 			s.append(v)
 		}
 	}
+	fmt.Println("sexp.readIn hit weird EOF")
 	return errors.New("unexpected EOF in sexp.readIn")
 }
 
 // parses one value that can be evaled from the channel
-func parse(c chan token) (interface{}, bool, error) {
+func parse(c chan token) (interface{}, error) {
 	for t := range c {
 		switch t.t {
 		case closeParenToken:
-			return nil, false, errors.New("unexpected EOF in read")
+			return nil, errors.New("unexpected close paren in read")
 		case openParenToken:
 			s := newSexp()
 			if err := s.readIn(c); err != nil {
-				return nil, true, err
+				return nil, err
 			}
-			return s, false, nil
+			return s, nil
 		default:
-			v, err := atom(t)
-			return v, false, err
+			return atom(t)
 		}
 	}
-	return nil, false, io.EOF
+	return nil, io.EOF
 }
 
 func eval(v interface{}, env *environment) (interface{}, error) {
@@ -210,7 +210,7 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 
 func evalall(c chan token, out chan interface{}, e chan error, env *environment) {
 	for {
-		v, _, err := parse(c)
+		v, err := parse(c)
 		switch err {
 		case io.EOF:
 			return
