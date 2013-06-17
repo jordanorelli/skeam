@@ -50,7 +50,7 @@ func tcpInterpreter(conn net.Conn, userinput chan string, out chan interface{}, 
 		case v := <-out:
 			fmt.Fprintln(manager, v)
 		case err := <-errors:
-			fmt.Fprintf(conn, "error: %v", err)
+			fmt.Fprintf(conn, "error: %v\n", err)
 		case line := <-userinput:
 			if errorMode {
 				skipLine(line)
@@ -67,7 +67,6 @@ func tcpInterpreter(conn net.Conn, userinput chan string, out chan interface{}, 
 			}
 
 			if err := addLine(line); err != nil {
-				fmt.Fprintf(conn, "error in addLine: %v", err)
 				errorMode = true
 				lines = lines[:0]
 				currentDepth = 0
