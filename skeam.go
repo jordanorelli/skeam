@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-var DEBUG = false
+var DEBUG bool
 
 type sexp struct {
 	items    []interface{}
@@ -242,6 +242,7 @@ func defaultInterpreter(out chan interface{}, errors chan error) {
 }
 
 func main() {
+	flag.BoolVar(&DEBUG, "debug", false, "puts the interpreter in debug mode")
 	flag.Parse()
 	if DEBUG {
 		fmt.Println(universe)
