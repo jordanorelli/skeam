@@ -140,7 +140,6 @@ func (s *sexp) readIn(c chan token) error {
 			s.append(v)
 		}
 	}
-	fmt.Println("sexp.readIn hit weird EOF")
 	return errors.New("unexpected EOF in sexp.readIn")
 }
 

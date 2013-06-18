@@ -23,6 +23,8 @@ func depth(s string) int {
 			n += 1
 		case ')':
 			n -= 1
+		case ';':
+			return n
 		}
 	}
 	return n
@@ -35,7 +37,7 @@ func tcpInterpreter(conn net.Conn, userinput chan string, out chan interface{}, 
 		if len(lines) >= MAX_SEXP_LINES {
 			return errSexpTooLong
 		}
-		lines = append(lines, line)
+		lines = append(lines, line+"\n")
 		return nil
 	}
 	errorMode := false
@@ -45,10 +47,21 @@ func tcpInterpreter(conn net.Conn, userinput chan string, out chan interface{}, 
 			errorMode = false
 		}
 	}
+	s := make(chan string)
+	go func() {
+		for program := range s {
+			tokens := make(chan token, 32)
+			go lexs(program, tokens)
+			evalall(tokens, out, errors, universe)
+		}
+	}()
+	go func() {
+		for v := range out {
+			fmt.Fprintln(conn, v)
+		}
+	}()
 	for {
 		select {
-		case v := <-out:
-			fmt.Fprintln(manager, v)
 		case err := <-errors:
 			fmt.Fprintf(conn, "error: %v\n", err)
 		case line := <-userinput:
@@ -59,10 +72,14 @@ func tcpInterpreter(conn net.Conn, userinput chan string, out chan interface{}, 
 			lineDepth := depth(line)
 			currentDepth += lineDepth
 
+			if currentDepth < 0 {
+				lines = lines[:0]
+				currentDepth = 0
+				break
+			}
+
 			if len(lines) == 0 && lineDepth == 0 {
-				tokens := make(chan token, 32)
-				go lexs(line+"\n", tokens)
-				go evalall(tokens, out, errors, universe)
+				s <- line + "\n"
 				break
 			}
 
@@ -74,11 +91,9 @@ func tcpInterpreter(conn net.Conn, userinput chan string, out chan interface{}, 
 			}
 
 			if currentDepth == 0 {
-				runnable := strings.Join(lines, " ")
+				program := strings.Join(append(lines, "\n"), " ")
 				lines = lines[:0]
-				tokens := make(chan token, 32)
-				go lexs(runnable+"\n", tokens)
-				go evalall(tokens, out, errors, universe)
+				s <- program
 			}
 		}
 	}
@@ -110,14 +125,12 @@ func startConnection(conn net.Conn, m *cm.Manager) {
 
 	r := bufio.NewReader(conn)
 	for {
-		line, prefix, err := r.ReadLine()
-		if prefix {
-			fmt.Println("(prefix)")
-		}
+		line, _, err := r.ReadLine()
 		switch err {
 		case nil:
 			break
 		case io.EOF:
+			io.WriteString(conn, "<eof>")
 			return
 		default:
 			printErrorMsg(err.Error())

@@ -29,6 +29,7 @@ func (m *Manager) run() {
 		case conn := <-m.connect:
 			m.active[conn] = true
 		case conn := <-m.disconnect:
+			conn.Close()
 			delete(m.active, conn)
 		case op := <-m.write:
 			m.broadcast(op)
