@@ -204,7 +204,6 @@ func main() {
 	}
 	if *tcpAddr != "" {
 		runTCPServer()
-		return
 	}
 	if len(flag.Args()) > 0 {
 		runfile()

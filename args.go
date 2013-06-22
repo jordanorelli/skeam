@@ -7,11 +7,12 @@ import (
 	"os"
 )
 
-var tcpAddr = flag.String("tcp", "", "foo")
+var (
+	tcpAddr = flag.String("tcp", "", "tcp ip:port to listen on")
+)
 
 func runfile() {
 	filename := flag.Args()[0]
-	fmt.Println(filename)
 	f, err := os.Open(filename)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "unable to read file ", filename)

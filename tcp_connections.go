@@ -24,11 +24,11 @@ func runTCPServer() {
 			printErrorMsg(err.Error())
 			continue
 		}
-		go startConnection(conn, manager)
+		go startTCPConnection(conn, manager)
 	}
 }
 
-func startConnection(conn net.Conn, m *cm.Manager) {
+func startTCPConnection(conn net.Conn, m *cm.Manager) {
 	m.Add(conn)
 	defer m.Remove(conn)
 

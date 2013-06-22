@@ -73,10 +73,16 @@ func (i interpreter) send() {
 	for {
 		select {
 		case v := <-i.values:
+			if i.out1 == nil {
+				return
+			}
 			if _, err := fmt.Fprintln(i.out1, v); err != nil {
 				fmt.Println("can't write out to client: ", err)
 			}
 		case e := <-i.errors:
+			if i.out2 == nil {
+				return
+			}
 			if _, err := fmt.Fprintln(i.out2, e); err != nil {
 				fmt.Println("can't write error to client: ", err)
 			}
