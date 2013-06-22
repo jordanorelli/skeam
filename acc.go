@@ -17,6 +17,10 @@ type accumulator struct {
 	floating bool
 }
 
+// runs the accumulator accros the set of values, applying the accumulator's
+// intFn and floatFn functions in order.  It's basically just a left fold, and
+// it starts using floatFn once the first float value is encountered, and then
+// thereafter.
 func (a accumulator) total(vals []interface{}) (interface{}, error) {
 	if vals == nil || len(vals) == 0 {
 		return a.acc, nil

@@ -1,0 +1,15 @@
+html, body {
+  height: 100%;
+}
+
+#bodywrap {
+  min-height: 100%;
+}
+
+#txt-repl {
+  position: relative;
+  margin: -120px 0 0 0;
+  height: 110px;
+  width: 100%;
+  clear: both;
+}

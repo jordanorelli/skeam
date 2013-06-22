@@ -8,9 +8,13 @@ import (
 )
 
 var (
-	tcpAddr = flag.String("tcp", "", "tcp ip:port to listen on")
+	tcpAddr  = flag.String("tcp", "", "tcp ip:port to listen on")
+	httpAddr = flag.String("http", "", "http ip:port to listen on")
 )
 
+// executes a file on disk using the universe environment.  This will block
+// until the entire file has been executed.  Vals and errors printed to stdout
+// and stderr, respectively.
 func runfile() {
 	filename := flag.Args()[0]
 	f, err := os.Open(filename)
