@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"io"
@@ -20,12 +19,8 @@ func runfile() {
 	}
 	defer f.Close()
 
-	out, errors := make(chan interface{}), make(chan error)
-	go defaultInterpreter(out, errors)
-
-	c := make(chan token, 32)
-	go lex(bufio.NewReader(f), c)
-	evalall(c, out, errors, universe)
+	i := newInterpreter(f, os.Stdout, os.Stderr)
+	i.run(universe)
 }
 
 func printErrorMsg(message string) {

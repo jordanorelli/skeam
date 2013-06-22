@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 )
@@ -162,84 +160,6 @@ func parse(c chan token) (interface{}, error) {
 	return nil, io.EOF
 }
 
-func eval(v interface{}, env *environment) (interface{}, error) {
-	if v == nil {
-		return &sexp{}, nil
-	}
-
-	switch t := v.(type) {
-
-	case symbol:
-		debugPrint("eval symbol")
-		s, err := env.get(t)
-		if err != nil {
-			return nil, err
-		}
-		return eval(s, env)
-
-	case *sexp:
-		debugPrint("eval sexp")
-		if t.len() == 0 {
-			return nil, errors.New("illegal evaluation of empty sexp ()")
-		}
-
-		if t.quotelvl > 0 {
-			return t, nil
-		}
-
-		// eval the first item
-		v, err := eval(t.items[0], env)
-		if err != nil {
-			return nil, err
-		}
-
-		c, ok := v.(callable)
-		if !ok {
-			return nil, fmt.Errorf(`expected special form or builtin procedure, received %v`, reflect.TypeOf(v))
-		}
-		if len(t.items) > 1 {
-			return c.call(env, t.items[1:])
-		}
-		return c.call(env, nil)
-
-	default:
-		debugPrint("default eval")
-		return v, nil
-	}
-
-	panic("not reached")
-}
-
-func evalall(c chan token, out chan interface{}, e chan error, env *environment) {
-	for {
-		v, err := parse(c)
-		switch err {
-		case io.EOF:
-			return
-		case nil:
-			if v, err := eval(v, env); err != nil {
-				e <- err
-				return
-			} else {
-				out <- v
-			}
-		default:
-			e <- err
-		}
-	}
-}
-
-func defaultInterpreter(out chan interface{}, errors chan error) {
-	for {
-		select {
-		case v := <-out:
-			fmt.Println(v)
-		case err := <-errors:
-			fmt.Printf("error: %v", err)
-		}
-	}
-}
-
 func main() {
 	flag.BoolVar(&DEBUG, "debug", false, "puts the interpreter in debug mode")
 	flag.Parse()
@@ -255,10 +175,6 @@ func main() {
 		return
 	}
 
-	out, errors := make(chan interface{}), make(chan error)
-	go defaultInterpreter(out, errors)
-
-	c := make(chan token, 32)
-	go lex(bufio.NewReader(os.Stdin), c)
-	evalall(c, out, errors, universe)
+	i := newInterpreter(os.Stdin, os.Stdout, os.Stderr)
+	i.run(universe)
 }
