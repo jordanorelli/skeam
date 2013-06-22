@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -15,6 +16,32 @@ var DEBUG bool
 type sexp struct {
 	items    []interface{}
 	quotelvl int
+}
+
+func (s *sexp) eval(env *environment) (interface{}, error) {
+	debugPrint("eval sexp")
+	if s.len() == 0 {
+		return nil, errors.New("illegal evaluation of empty sexp ()")
+	}
+
+	if s.quotelvl > 0 {
+		return s, nil
+	}
+
+	// eval the first item
+	v, err := eval(s.items[0], env)
+	if err != nil {
+		return nil, err
+	}
+
+	c, ok := v.(callable)
+	if !ok {
+		return nil, fmt.Errorf(`expected special form or builtin procedure, received %v`, reflect.TypeOf(v))
+	}
+	if len(s.items) > 1 {
+		return c.call(env, s.items[1:])
+	}
+	return c.call(env, nil)
 }
 
 type callable interface {
@@ -45,6 +72,15 @@ func (s sexp) len() int {
 }
 
 type symbol string
+
+func (s symbol) eval(env *environment) (interface{}, error) {
+	debugPrint("eval symbol")
+	v, err := env.get(s)
+	if err != nil {
+		return nil, err
+	}
+	return eval(v, env)
+}
 
 var universe = &environment{map[symbol]interface{}{
 	// predefined values

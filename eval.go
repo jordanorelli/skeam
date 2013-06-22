@@ -2,10 +2,8 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
-	"reflect"
 )
 
 func eval(v interface{}, env *environment) (interface{}, error) {
@@ -14,40 +12,10 @@ func eval(v interface{}, env *environment) (interface{}, error) {
 	}
 
 	switch t := v.(type) {
-
 	case symbol:
-		debugPrint("eval symbol")
-		s, err := env.get(t)
-		if err != nil {
-			return nil, err
-		}
-		return eval(s, env)
-
+		return t.eval(env)
 	case *sexp:
-		debugPrint("eval sexp")
-		if t.len() == 0 {
-			return nil, errors.New("illegal evaluation of empty sexp ()")
-		}
-
-		if t.quotelvl > 0 {
-			return t, nil
-		}
-
-		// eval the first item
-		v, err := eval(t.items[0], env)
-		if err != nil {
-			return nil, err
-		}
-
-		c, ok := v.(callable)
-		if !ok {
-			return nil, fmt.Errorf(`expected special form or builtin procedure, received %v`, reflect.TypeOf(v))
-		}
-		if len(t.items) > 1 {
-			return c.call(env, t.items[1:])
-		}
-		return c.call(env, nil)
-
+		return t.eval(env)
 	default:
 		debugPrint("default eval")
 		return v, nil
@@ -83,7 +51,6 @@ func (i interpreter) run(env *environment) {
 		v, err := parse(i.tokens)
 		switch err {
 		case io.EOF:
-			fmt.Println("EOF lol")
 			return
 		case nil:
 			i.eval(v, env)
