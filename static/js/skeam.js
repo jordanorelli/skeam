@@ -55,17 +55,22 @@ var ConnectionHandler = function(wsPath) {
 };
 
 ConnectionHandler.prototype.onopen = function(event) {
-  console.log({open: event});
+  this.broadcastOpen();
 };
 
+ConnectionHandler.prototype.broadcastOpen = function() {
+  var event = document.createEvent("Event");
+  event.initEvent("wsOpen", true, true);
+  document.dispatchEvent(event);
+}
+
 ConnectionHandler.prototype.onclose = function(event) {
-  console.log({close: event});
   this.broadcastClose();
 };
 
 ConnectionHandler.prototype.broadcastClose = function() {
   var event = document.createEvent("Event");
-  event.initEvent("wsClosed", true, true);
+  event.initEvent("wsClose", true, true);
   document.dispatchEvent(event);
 }
 
@@ -126,7 +131,8 @@ var Skeam = function(config) {
   this.conn = new ConnectionHandler(config.wsPath);
   document.addEventListener("sendMsg", _.bind(this.sendMsg, this), false);
   document.addEventListener("receiveResponse", _.bind(this.receiveResponse, this), false);
-  document.addEventListener("wsClosed", _.bind(this.onclose, this), false);
+  document.addEventListener("wsClose", _.bind(this.onclose, this), false);
+  document.addEventListener("wsOpen", _.bind(this.onopen, this), false);
 };
 
 Skeam.prototype.sendMsg = function(event) {
@@ -145,4 +151,8 @@ Skeam.prototype.receiveResponse = function(event) {
 
 Skeam.prototype.onclose = function() {
   this.messageDisplay.addSys("connection closed");
+};
+
+Skeam.prototype.onopen = function() {
+  this.messageDisplay.addSys("connection openned");
 };
