@@ -4,8 +4,13 @@
       {{js "jquery-1.9.1.min.js"}}
       {{js "underscore-min.js"}}
       {{js "skeam.js"}}
-      <script type="application/template" id="message-template">
-        <div class="message">
+      <script type="application/template" id="request-template">
+        <div class="request">
+          <pre><%= message %></pre>
+        </div>
+      </script>
+      <script type="application/template" id="response-template">
+        <div class="response">
           <pre><%= message %></pre>
         </div>
       </script>
@@ -14,13 +19,20 @@
           <pre><%= message %></pre>
         </div>
       </script>
+      <script type="application/template" id="sys-template">
+        <div class="sys">
+          <pre><%= message %></pre>
+        </div>
+      </script>
       <script>
         $(document).ready(function() {
           var skeam = new Skeam({
             inputSelector: "#txt-repl",
             outputSelector: "#responses",
-            messageTemplateSelector: "#message-template",
+            requestTemplateSelector: "#request-template",
+            responseTemplateSelector: "#response-template",
             errorTemplateSelector: "#error-template",
+            sysTemplateSelector: "#sys-template",
             wsPath: "{{.ws_path}}"
           });
         });

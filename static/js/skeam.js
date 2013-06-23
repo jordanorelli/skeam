@@ -60,7 +60,14 @@ ConnectionHandler.prototype.onopen = function(event) {
 
 ConnectionHandler.prototype.onclose = function(event) {
   console.log({close: event});
+  this.broadcastClose();
 };
+
+ConnectionHandler.prototype.broadcastClose = function() {
+  var event = document.createEvent("Event");
+  event.initEvent("wsClosed", true, true);
+  document.dispatchEvent(event);
+}
 
 ConnectionHandler.prototype.onmessage = function(event) {
   this.broadcastMessageReceived(event.data);
@@ -85,36 +92,57 @@ ConnectionHandler.prototype.sendMsg = function(message) {
 // response rendering
 // -----------------------------------------------------------------------------
 
-var MessageDisplay = function(selector, templateSelector, errorTemplateSelector) {
+var MessageDisplay = function(selector, requestTemplateSelector, responseTemplateSelector, errorTemplateSelector, sysTemplateSelector) {
   this.elem = $(selector);
-  this.renderMessage = _.template($(templateSelector).html());
+  this.renderRequest = _.template($(requestTemplateSelector).html());
+  this.renderResponse = _.template($(responseTemplateSelector).html());
   this.renderError = _.template($(errorTemplateSelector).html());
+  this.renderSys = _.template($(sysTemplateSelector).html());
 }
 
-MessageDisplay.prototype.addMessage = function(rawmessage) {
-  var message = JSON.parse(rawmessage);
-  if (message.is_error) {
-    var rendered = this.renderError(message);
-  } else {
-    var rendered = this.renderMessage(message);
-  }
-  this.elem.append(rendered);
+MessageDisplay.prototype.addRequest = function(request) {
+  this.elem.append(this.renderRequest({message: request}));
+};
+
+MessageDisplay.prototype.addResponse = function(response) {
+  this.elem.append(this.renderResponse({message: response}));
+};
+
+MessageDisplay.prototype.addError = function(error) {
+  this.elem.append(this.renderError({message: error}));
+};
+
+MessageDisplay.prototype.addSys = function(sys) {
+  this.elem.append(this.renderSys({message: sys}));
 };
 
 var Skeam = function(config) {
   this.inputHandler = new InputHandler(config.inputSelector);
   this.messageDisplay = new MessageDisplay(config.outputSelector,
-                                           config.messageTemplateSelector,
-                                           config.errorTemplateSelector);
+                                           config.requestTemplateSelector,
+                                           config.responseTemplateSelector,
+                                           config.errorTemplateSelector,
+                                           config.sysTemplateSelector);
   this.conn = new ConnectionHandler(config.wsPath);
   document.addEventListener("sendMsg", _.bind(this.sendMsg, this), false);
   document.addEventListener("receiveResponse", _.bind(this.receiveResponse, this), false);
+  document.addEventListener("wsClosed", _.bind(this.onclose, this), false);
 };
 
 Skeam.prototype.sendMsg = function(event) {
+  this.messageDisplay.addRequest(event.message);
   this.conn.sendMsg(event.message + "\n");
-}
+};
 
 Skeam.prototype.receiveResponse = function(event) {
-  this.messageDisplay.addMessage(event.message);
-}
+  var message = JSON.parse(event.message);
+  if (message.is_error) {
+    this.messageDisplay.addError(message.message);
+  } else {
+    this.messageDisplay.addResponse(message.message);
+  }
+};
+
+Skeam.prototype.onclose = function() {
+  this.messageDisplay.addSys("connection closed");
+};

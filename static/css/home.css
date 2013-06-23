@@ -28,10 +28,19 @@ body {
     font-family: monospace;
 }
 
-.message {
+.request {
+  color: gray;
+}
 
+.response {
+  color: black;
 }
 
 .error {
   color: red;
+}
+
+.sys {
+  color: gray;
+  font-style: italic;
 }
