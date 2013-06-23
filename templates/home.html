@@ -1,13 +1,27 @@
 <html>
     <head>
       {{css "home.css"}}
+      {{js "jquery-1.9.1.min.js"}}
+      {{js "underscore-min.js"}}
+      {{js "skeam.js"}}
+      <script type="application/template" id="message-template">
+        <div class="message">
+          <pre><%= message %></pre>
+        </div>
+      </script>
+      <script>
+        $(document).ready(function() {
+          var skeam = new Skeam({
+            inputSelector: "#txt-repl",
+            outputSelector: "#responses",
+            messageTemplateSelector: "#message-template",
+            wsPath: "ws://localhost:8000/ws"
+          });
+        });
+      </script>
     </head>
     <body>
-      <div id="bodywrap">
-      </div>
-      <div id="footer">
-        <textarea id="txt-repl"></textarea>
-      </div>
-      {{js "skeam.js"}}
+      <div id="responses"></div>
+      <textarea id="txt-repl"></textarea>
     </body>
 </html>

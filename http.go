@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/jordanorelli/skeam/am"
 	"html/template"
-	"io"
 	"net/http"
 	"path/filepath"
 )
@@ -55,7 +54,11 @@ func (t templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func wsHandler(ws *websocket.Conn) {
-	io.Copy(ws, ws)
+	manager.Add(ws)
+	defer manager.Remove(ws)
+
+	i := newInterpreter(ws, ws, ws)
+	i.run(universe)
 }
 
 func runHTTPServer() {
