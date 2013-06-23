@@ -9,13 +9,19 @@
           <pre><%= message %></pre>
         </div>
       </script>
+      <script type="application/template" id="error-template">
+        <div class="error">
+          <pre><%= message %></pre>
+        </div>
+      </script>
       <script>
         $(document).ready(function() {
           var skeam = new Skeam({
             inputSelector: "#txt-repl",
             outputSelector: "#responses",
             messageTemplateSelector: "#message-template",
-            wsPath: "ws://localhost:8000/ws"
+            errorTemplateSelector: "#error-template",
+            wsPath: "{{.ws_path}}"
           });
         });
       </script>

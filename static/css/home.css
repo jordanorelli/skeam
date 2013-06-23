@@ -31,3 +31,7 @@ body {
 .message {
 
 }
+
+.error {
+  color: red;
+}

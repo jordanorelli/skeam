@@ -39,9 +39,15 @@ InputHandler.prototype.clear = function() {
 // connection handling
 // -----------------------------------------------------------------------------
 
+var buildWsPath = function(wsPath) {
+  if (window.location.port) {
+    return "ws://" + window.location.hostname + ":" + window.location.port + wsPath;
+  }
+  return "ws://" + window.location.hostname + wsPath;
+}
+
 var ConnectionHandler = function(wsPath) {
-  this.path = wsPath;
-  this.c = new WebSocket(wsPath);
+  this.c = new WebSocket(buildWsPath(wsPath));
   this.c.onopen = _.bind(this.onopen, this);
   this.c.onclose = _.bind(this.onclose, this);
   this.c.onerror = _.bind(this.onerror, this);
@@ -79,19 +85,27 @@ ConnectionHandler.prototype.sendMsg = function(message) {
 // response rendering
 // -----------------------------------------------------------------------------
 
-var MessageDisplay = function(selector, templateSelector) {
+var MessageDisplay = function(selector, templateSelector, errorTemplateSelector) {
   this.elem = $(selector);
   this.renderMessage = _.template($(templateSelector).html());
+  this.renderError = _.template($(errorTemplateSelector).html());
 }
 
-MessageDisplay.prototype.addMessage = function(message) {
-  var rendered = this.renderMessage({message: message});
+MessageDisplay.prototype.addMessage = function(rawmessage) {
+  var message = JSON.parse(rawmessage);
+  if (message.is_error) {
+    var rendered = this.renderError(message);
+  } else {
+    var rendered = this.renderMessage(message);
+  }
   this.elem.append(rendered);
 };
 
 var Skeam = function(config) {
   this.inputHandler = new InputHandler(config.inputSelector);
-  this.messageDisplay = new MessageDisplay(config.outputSelector, config.messageTemplateSelector);
+  this.messageDisplay = new MessageDisplay(config.outputSelector,
+                                           config.messageTemplateSelector,
+                                           config.errorTemplateSelector);
   this.conn = new ConnectionHandler(config.wsPath);
   document.addEventListener("sendMsg", _.bind(this.sendMsg, this), false);
   document.addEventListener("receiveResponse", _.bind(this.receiveResponse, this), false);
