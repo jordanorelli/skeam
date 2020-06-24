@@ -1,11 +1,11 @@
 # skeam
 
 Skeam is a primitive
-[Lisp](http://en.wikipedia.org/wiki/Lisp_(programming_language\)) interpreter.
+[Lisp](http://en.wikipedia.org/wiki/Lisp_(programming_language)) interpreter.
 I wrote this out of a curiosity to learn about the basics of writing
 interpreters; it's not something that I'd recommend using, but it may be
 helpful to look at if you're interested in writing your own.  The name comes
-from [Scheme](http://en.wikipedia.org/wiki/Scheme_(programming_language\)) and
+from [Scheme](http://en.wikipedia.org/wiki/Scheme_(programming_language)) and
 [Skream](http://en.wikipedia.org/wiki/Skream).
 
 Skeam does not implement [tail-call](http://en.wikipedia.org/wiki/Tail_call)
